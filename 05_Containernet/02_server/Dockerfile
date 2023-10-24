@@ -1,6 +1,9 @@
 # For more information, please refer to https://aka.ms/vscode-docker-python
 FROM python:3.10-slim
 
+# Set default shell to /bin/bash
+SHELL [ "/bin/bash", "-c" ]
+
 # Keeps Python from generating .pyc files in the container
 ENV PYTHONDONTWRITEBYTECODE=1
 
@@ -9,13 +12,20 @@ ENV PYTHONUNBUFFERED=1
 
 # Install the required packages for Containernet
 RUN apt-get update && apt-get install -y \
-    bash \
+    net-tools \
+    iputils-ping \
     iproute2 \
-    iputils-ping
+    curl \
+    bash \
+    tcpdump \
+    iperf
 
 # Install pip requirements
 COPY requirements.txt .
 RUN python -m pip install -r requirements.txt
+
+# Expose port 4840
+EXPOSE 4840
 
 # Set the working directory
 WORKDIR /app
