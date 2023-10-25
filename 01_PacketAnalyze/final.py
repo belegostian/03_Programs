@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 SOURCE_IP = '192.168.3.107'
-CAPTURE_FILE = 'packets\HOMGE1.pcapng'
+CAPTURE_FILE = 'Real_Device_Traffic_Capture\HOMGE1.pcap'
 TIME_INTERVAL = 10
 
 def read_pcapng_file(filename):
