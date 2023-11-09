@@ -1,0 +1,385 @@
+<?xml version='1.0' encoding='utf-8'?>
+<UANodeSet xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:uax="http://opcfoundation.org/UA/2008/02/Types.xsd" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="http://opcfoundation.org/UA/2011/03/UANodeSet.xsd">
+  <NamespaceUris>
+    <Uri>urn:freeopcua:python:server</Uri>
+    <Uri>http://opcfoundation.org/UA/Machinery/</Uri>
+    <Uri>http://opcfoundation.org/UA/CNC</Uri>
+    <Uri>http://opcfoundation.org/UA/MachineTool/</Uri>
+  </NamespaceUris>
+  <Aliases>
+    <Alias Alias="UInt32">i=7</Alias>
+    <Alias Alias="Int64">i=8</Alias>
+    <Alias Alias="Double">i=11</Alias>
+    <Alias Alias="String">i=12</Alias>
+    <Alias Alias="Organizes">i=35</Alias>
+    <Alias Alias="HasTypeDefinition">i=40</Alias>
+    <Alias Alias="HasProperty">i=46</Alias>
+    <Alias Alias="HasComponent">i=47</Alias>
+    <Alias Alias="HasAlarmSuppressionGroup">i=16361</Alias>
+  </Aliases>
+  <UAObject NodeId="i=20001" BrowseName="1:Cnc" ParentNodeId="ns=2;i=1001">
+    <DisplayName>CncInterfaceType</DisplayName>
+    <Description>Entry point to CNC data interface.</Description>
+    <References>
+      <Reference ReferenceType="Organizes" IsForward="false">ns=2;i=1001</Reference>
+      <Reference ReferenceType="HasTypeDefinition">ns=3;i=1007</Reference>
+      <Reference ReferenceType="HasComponent">i=20002</Reference>
+      <Reference ReferenceType="HasComponent">i=20003</Reference>
+      <Reference ReferenceType="HasComponent">i=20004</Reference>
+      <Reference ReferenceType="HasProperty">i=20005</Reference>
+      <Reference ReferenceType="HasProperty">i=20006</Reference>
+      <Reference ReferenceType="HasProperty">i=20007</Reference>
+      <Reference ReferenceType="HasProperty">i=20008</Reference>
+      <Reference ReferenceType="HasProperty">i=20009</Reference>
+      <Reference ReferenceType="HasComponent">i=20010</Reference>
+      <Reference ReferenceType="HasComponent">ns=1;i=2001</Reference>
+      <Reference ReferenceType="HasComponent">ns=1;i=2006</Reference>
+      <Reference ReferenceType="HasComponent">i=20448</Reference>
+    </References>
+  </UAObject>
+  <UAObject NodeId="i=20010" BrowseName="1:Alarm" ParentNodeId="i=20001">
+    <DisplayName>CncAlarmType</DisplayName>
+    <Description>Event transmitting Alarms within a CNC system.</Description>
+    <References>
+      <Reference ReferenceType="HasComponent" IsForward="false">i=20001</Reference>
+      <Reference ReferenceType="HasTypeDefinition">ns=3;i=1006</Reference>
+      <Reference ReferenceType="HasProperty">i=20011</Reference>
+      <Reference ReferenceType="HasProperty">i=20012</Reference>
+      <Reference ReferenceType="HasProperty">i=20018</Reference>
+      <Reference ReferenceType="HasComponent">i=20028</Reference>
+      <Reference ReferenceType="HasComponent">i=20030</Reference>
+      <Reference ReferenceType="HasProperty">i=20037</Reference>
+      <Reference ReferenceType="HasComponent">i=20038</Reference>
+      <Reference ReferenceType="HasComponent">i=20044</Reference>
+      <Reference ReferenceType="HasComponent">i=20049</Reference>
+      <Reference ReferenceType="HasProperty">i=20060</Reference>
+      <Reference ReferenceType="HasProperty">i=20061</Reference>
+      <Reference ReferenceType="HasProperty">i=20062</Reference>
+      <Reference ReferenceType="HasComponent">i=20063</Reference>
+      <Reference ReferenceType="HasComponent">i=20064</Reference>
+      <Reference ReferenceType="HasProperty">i=20069</Reference>
+      <Reference ReferenceType="HasProperty">i=20070</Reference>
+      <Reference ReferenceType="HasComponent">i=20071</Reference>
+      <Reference ReferenceType="HasComponent">i=20077</Reference>
+      <Reference ReferenceType="HasComponent">i=20082</Reference>
+      <Reference ReferenceType="HasAlarmSuppressionGroup">i=20099</Reference>
+      <Reference ReferenceType="HasProperty">i=20100</Reference>
+      <Reference ReferenceType="HasComponent">i=20102</Reference>
+      <Reference ReferenceType="HasComponent">i=20103</Reference>
+      <Reference ReferenceType="HasComponent">i=20104</Reference>
+      <Reference ReferenceType="HasComponent">i=20105</Reference>
+      <Reference ReferenceType="HasComponent">i=20107</Reference>
+      <Reference ReferenceType="HasComponent">i=20108</Reference>
+      <Reference ReferenceType="HasComponent">i=20110</Reference>
+      <Reference ReferenceType="HasComponent">i=20111</Reference>
+      <Reference ReferenceType="HasComponent">i=20113</Reference>
+      <Reference ReferenceType="HasComponent">i=20114</Reference>
+      <Reference ReferenceType="HasComponent">i=20116</Reference>
+      <Reference ReferenceType="HasComponent">i=20117</Reference>
+      <Reference ReferenceType="HasComponent">i=20119</Reference>
+      <Reference ReferenceType="HasComponent">i=20121</Reference>
+      <Reference ReferenceType="HasComponent">i=20126</Reference>
+      <Reference ReferenceType="HasComponent">i=20131</Reference>
+      <Reference ReferenceType="HasComponent">i=20133</Reference>
+      <Reference ReferenceType="HasProperty">i=20135</Reference>
+      <Reference ReferenceType="HasProperty">i=20136</Reference>
+      <Reference ReferenceType="HasProperty">i=20137</Reference>
+      <Reference ReferenceType="HasProperty">i=20140</Reference>
+      <Reference ReferenceType="HasProperty">i=20150</Reference>
+      <Reference ReferenceType="HasProperty">i=20155</Reference>
+      <Reference ReferenceType="HasProperty">i=20156</Reference>
+      <Reference ReferenceType="HasComponent">i=20162</Reference>
+      <Reference ReferenceType="HasComponent">i=20164</Reference>
+      <Reference ReferenceType="HasComponent">i=20166</Reference>
+      <Reference ReferenceType="HasProperty">i=20168</Reference>
+      <Reference ReferenceType="HasComponent">i=20182</Reference>
+      <Reference ReferenceType="HasComponent">i=20183</Reference>
+      <Reference ReferenceType="HasComponent">i=20184</Reference>
+      <Reference ReferenceType="HasProperty">i=20186</Reference>
+      <Reference ReferenceType="HasProperty">i=20187</Reference>
+      <Reference ReferenceType="HasProperty">i=20188</Reference>
+      <Reference ReferenceType="HasProperty">i=20189</Reference>
+      <Reference ReferenceType="HasProperty">i=20190</Reference>
+      <Reference ReferenceType="HasProperty">i=20191</Reference>
+      <Reference ReferenceType="HasProperty">i=20192</Reference>
+      <Reference ReferenceType="HasProperty">i=20193</Reference>
+      <Reference ReferenceType="HasProperty">i=20194</Reference>
+    </References>
+  </UAObject>
+  <UAObject NodeId="ns=1;i=2001" BrowseName="1:1:Nameplate" ParentNodeId="i=20001">
+    <DisplayName>1:Nameplate</DisplayName>
+    <Description>1:Nameplate</Description>
+    <References>
+      <Reference ReferenceType="HasComponent" IsForward="false">i=20001</Reference>
+      <Reference ReferenceType="HasTypeDefinition">i=58</Reference>
+      <Reference ReferenceType="HasProperty">ns=1;i=2002</Reference>
+      <Reference ReferenceType="HasProperty">ns=1;i=2003</Reference>
+      <Reference ReferenceType="HasProperty">ns=1;i=2004</Reference>
+      <Reference ReferenceType="HasProperty">ns=1;i=2005</Reference>
+    </References>
+  </UAObject>
+  <UAObject NodeId="i=20237" BrowseName="1:Channel" ParentNodeId="i=20003">
+    <DisplayName>CncChannelType</DisplayName>
+    <Description>CNC channel component.</Description>
+    <References>
+      <Reference ReferenceType="HasComponent" IsForward="false">i=20003</Reference>
+      <Reference ReferenceType="HasTypeDefinition">ns=3;i=1002</Reference>
+      <Reference ReferenceType="HasComponent">i=20238</Reference>
+      <Reference ReferenceType="HasComponent">i=20273</Reference>
+      <Reference ReferenceType="HasComponent">i=20314</Reference>
+      <Reference ReferenceType="HasComponent">i=20317</Reference>
+      <Reference ReferenceType="HasComponent">i=20318</Reference>
+      <Reference ReferenceType="HasComponent">i=20321</Reference>
+      <Reference ReferenceType="HasComponent">i=20322</Reference>
+      <Reference ReferenceType="HasComponent">i=20323</Reference>
+      <Reference ReferenceType="HasComponent">i=20324</Reference>
+      <Reference ReferenceType="HasComponent">i=20325</Reference>
+      <Reference ReferenceType="HasComponent">i=20326</Reference>
+      <Reference ReferenceType="HasComponent">i=20327</Reference>
+      <Reference ReferenceType="HasComponent">i=20328</Reference>
+      <Reference ReferenceType="HasComponent">i=20331</Reference>
+      <Reference ReferenceType="HasComponent">i=20332</Reference>
+      <Reference ReferenceType="HasComponent">i=20333</Reference>
+      <Reference ReferenceType="HasComponent">i=20334</Reference>
+      <Reference ReferenceType="HasComponent">i=20335</Reference>
+      <Reference ReferenceType="HasComponent">i=20336</Reference>
+      <Reference ReferenceType="HasComponent">i=20337</Reference>
+      <Reference ReferenceType="HasComponent">i=20338</Reference>
+      <Reference ReferenceType="HasComponent">i=20339</Reference>
+      <Reference ReferenceType="HasComponent">i=20342</Reference>
+      <Reference ReferenceType="HasComponent">i=20343</Reference>
+      <Reference ReferenceType="HasComponent">i=20346</Reference>
+      <Reference ReferenceType="HasComponent">i=20349</Reference>
+      <Reference ReferenceType="HasProperty">i=20350</Reference>
+      <Reference ReferenceType="HasComponent">i=20351</Reference>
+      <Reference ReferenceType="HasComponent">i=20357</Reference>
+      <Reference ReferenceType="HasComponent">i=20363</Reference>
+      <Reference ReferenceType="HasComponent">i=20369</Reference>
+      <Reference ReferenceType="HasComponent">i=20375</Reference>
+      <Reference ReferenceType="HasComponent">i=20381</Reference>
+      <Reference ReferenceType="HasComponent">i=20387</Reference>
+      <Reference ReferenceType="HasComponent">i=20393</Reference>
+      <Reference ReferenceType="HasComponent">i=20399</Reference>
+      <Reference ReferenceType="HasComponent">i=20405</Reference>
+      <Reference ReferenceType="HasComponent">i=20412</Reference>
+      <Reference ReferenceType="HasComponent">i=20418</Reference>
+      <Reference ReferenceType="HasComponent">i=20424</Reference>
+      <Reference ReferenceType="HasComponent">i=20425</Reference>
+    </References>
+  </UAObject>
+  <UAObject NodeId="i=20425" BrowseName="1:ProductionJob" ParentNodeId="i=20237">
+    <DisplayName>ProductionJobType</DisplayName>
+    <References>
+      <Reference ReferenceType="HasComponent" IsForward="false">i=20237</Reference>
+      <Reference ReferenceType="HasTypeDefinition">ns=4;i=29</Reference>
+      <Reference ReferenceType="HasProperty">i=20426</Reference>
+      <Reference ReferenceType="HasProperty">i=20427</Reference>
+      <Reference ReferenceType="HasProperty">i=20428</Reference>
+      <Reference ReferenceType="HasProperty">i=20429</Reference>
+      <Reference ReferenceType="HasComponent">i=20430</Reference>
+      <Reference ReferenceType="HasComponent">i=20431</Reference>
+      <Reference ReferenceType="HasComponent">i=20436</Reference>
+      <Reference ReferenceType="HasComponent">i=20437</Reference>
+      <Reference ReferenceType="HasComponent">i=20441</Reference>
+      <Reference ReferenceType="HasComponent">i=20442</Reference>
+      <Reference ReferenceType="HasComponent">i=20444</Reference>
+    </References>
+  </UAObject>
+  <UAObject NodeId="ns=1;i=2006" BrowseName="1:1:Drive" ParentNodeId="i=20001">
+    <DisplayName>1:Drive</DisplayName>
+    <Description>1:Drive</Description>
+    <References>
+      <Reference ReferenceType="HasComponent" IsForward="false">i=20001</Reference>
+      <Reference ReferenceType="HasTypeDefinition">i=58</Reference>
+      <Reference ReferenceType="HasProperty">ns=1;i=2007</Reference>
+      <Reference ReferenceType="HasProperty">ns=1;i=2008</Reference>
+      <Reference ReferenceType="HasProperty">ns=1;i=2009</Reference>
+      <Reference ReferenceType="HasProperty">ns=1;i=2010</Reference>
+      <Reference ReferenceType="HasProperty">ns=1;i=2011</Reference>
+    </References>
+  </UAObject>
+  <UAObject NodeId="i=20195" BrowseName="1:Spindle" ParentNodeId="i=20004">
+    <DisplayName>CncSpindleType</DisplayName>
+    <Description>CNC spindle component.</Description>
+    <References>
+      <Reference ReferenceType="HasComponent" IsForward="false">i=20004</Reference>
+      <Reference ReferenceType="HasTypeDefinition">ns=3;i=1005</Reference>
+      <Reference ReferenceType="HasComponent">i=20196</Reference>
+      <Reference ReferenceType="HasComponent">i=20197</Reference>
+      <Reference ReferenceType="HasComponent">i=20204</Reference>
+      <Reference ReferenceType="HasComponent">i=20207</Reference>
+      <Reference ReferenceType="HasComponent">i=20208</Reference>
+      <Reference ReferenceType="HasComponent">i=20209</Reference>
+      <Reference ReferenceType="HasComponent">i=20216</Reference>
+      <Reference ReferenceType="HasComponent">i=20217</Reference>
+      <Reference ReferenceType="HasComponent">i=20219</Reference>
+      <Reference ReferenceType="HasComponent">i=20222</Reference>
+      <Reference ReferenceType="HasComponent">i=20223</Reference>
+      <Reference ReferenceType="HasComponent">i=20226</Reference>
+      <Reference ReferenceType="HasComponent">i=20229</Reference>
+      <Reference ReferenceType="HasComponent">i=20232</Reference>
+      <Reference ReferenceType="HasComponent">i=20235</Reference>
+      <Reference ReferenceType="HasComponent">i=20236</Reference>
+    </References>
+  </UAObject>
+  <UAObject NodeId="i=20450" BrowseName="1:Tool01" ParentNodeId="i=20448">
+    <DisplayName>ToolType</DisplayName>
+    <References>
+      <Reference ReferenceType="HasComponent" IsForward="false">i=20448</Reference>
+      <Reference ReferenceType="HasTypeDefinition">ns=4;i=50</Reference>
+      <Reference ReferenceType="HasComponent">i=20451</Reference>
+      <Reference ReferenceType="HasComponent">i=20452</Reference>
+      <Reference ReferenceType="HasComponent">i=20453</Reference>
+      <Reference ReferenceType="HasComponent">i=20454</Reference>
+      <Reference ReferenceType="HasComponent">i=20455</Reference>
+      <Reference ReferenceType="HasComponent">i=20457</Reference>
+      <Reference ReferenceType="HasComponent">i=20458</Reference>
+      <Reference ReferenceType="HasProperty">i=20463</Reference>
+      <Reference ReferenceType="HasComponent">i=20464</Reference>
+      <Reference ReferenceType="HasProperty">i=20467</Reference>
+    </References>
+  </UAObject>
+  <UAVariable NodeId="ns=1;i=2002" BrowseName="1:Manufacturer" ParentNodeId="ns=1;i=2001" DataType="String">
+    <DisplayName>Manufacturer</DisplayName>
+    <Description>Manufacturer</Description>
+    <References>
+      <Reference ReferenceType="HasProperty" IsForward="false">ns=1;i=2001</Reference>
+      <Reference ReferenceType="HasTypeDefinition">i=68</Reference>
+    </References>
+  </UAVariable>
+  <UAVariable NodeId="ns=1;i=2004" BrowseName="1:SerialNumber" ParentNodeId="ns=1;i=2001" DataType="String">
+    <DisplayName>SerialNumber</DisplayName>
+    <Description>SerialNumber</Description>
+    <References>
+      <Reference ReferenceType="HasProperty" IsForward="false">ns=1;i=2001</Reference>
+      <Reference ReferenceType="HasTypeDefinition">i=68</Reference>
+    </References>
+  </UAVariable>
+  <UAVariable NodeId="i=20005" BrowseName="3:CncTypeName" ParentNodeId="i=20001" DataType="String" AccessLevel="3" UserAccessLevel="3" Historizing="true">
+    <DisplayName>CncTypeName</DisplayName>
+    <References>
+      <Reference ReferenceType="HasProperty" IsForward="false">i=20001</Reference>
+      <Reference ReferenceType="HasTypeDefinition">i=68</Reference>
+    </References>
+  </UAVariable>
+  <UAVariable NodeId="i=20337" BrowseName="3:ActStatus" ParentNodeId="i=20237" DataType="ns=3;i=3003" AccessLevel="3" UserAccessLevel="3" Historizing="true">
+    <DisplayName>ActStatus</DisplayName>
+    <Description>Active status of channel.</Description>
+    <References>
+      <Reference ReferenceType="HasComponent" IsForward="false">i=20237</Reference>
+      <Reference ReferenceType="HasTypeDefinition">i=2365</Reference>
+    </References>
+  </UAVariable>
+  <UAVariable NodeId="i=20324" BrowseName="3:ActMainProgramName" ParentNodeId="i=20237" DataType="String" AccessLevel="3" UserAccessLevel="3" Historizing="true">
+    <DisplayName>ActMainProgramName</DisplayName>
+    <Description>Name of active CNC main program.</Description>
+    <References>
+      <Reference ReferenceType="HasComponent" IsForward="false">i=20237</Reference>
+      <Reference ReferenceType="HasTypeDefinition">i=2365</Reference>
+    </References>
+  </UAVariable>
+  <UAVariable NodeId="i=20442" BrowseName="4:RunsPlanned" ParentNodeId="i=20425" DataType="UInt32" Historizing="true">
+    <DisplayName>RunsPlanned</DisplayName>
+    <References>
+      <Reference ReferenceType="HasComponent" IsForward="false">i=20425</Reference>
+      <Reference ReferenceType="HasTypeDefinition">i=63</Reference>
+      <Reference ReferenceType="HasProperty">i=20443</Reference>
+    </References>
+  </UAVariable>
+  <UAVariable NodeId="i=20441" BrowseName="4:RunsCompleted" ParentNodeId="i=20425" DataType="UInt32" Historizing="true">
+    <DisplayName>RunsCompleted</DisplayName>
+    <References>
+      <Reference ReferenceType="HasComponent" IsForward="false">i=20425</Reference>
+      <Reference ReferenceType="HasTypeDefinition">i=63</Reference>
+    </References>
+  </UAVariable>
+  <UAVariable NodeId="i=20011" BrowseName="3:AlarmIdentifier" ParentNodeId="i=20010" DataType="String" AccessLevel="3" UserAccessLevel="3" Historizing="true">
+    <DisplayName>AlarmIdentifier</DisplayName>
+    <Description>Unique alarm number.</Description>
+    <References>
+      <Reference ReferenceType="HasProperty" IsForward="false">i=20010</Reference>
+      <Reference ReferenceType="HasTypeDefinition">i=68</Reference>
+    </References>
+  </UAVariable>
+  <UAVariable NodeId="i=20325" BrowseName="3:ActMFunctions" ParentNodeId="i=20237" ValueRank="1" DataType="UInt32" AccessLevel="3" UserAccessLevel="3" Historizing="true">
+    <DisplayName>ActMFunctions</DisplayName>
+    <Description>Array of active M functions: there can be several M functions active at a time (modal and non-modal M functions).</Description>
+    <References>
+      <Reference ReferenceType="HasComponent" IsForward="false">i=20237</Reference>
+      <Reference ReferenceType="HasTypeDefinition">i=2365</Reference>
+    </References>
+  </UAVariable>
+  <UAVariable NodeId="ns=1;i=2007" BrowseName="1:ActLoad" ParentNodeId="ns=1;i=2006" DataType="Int64">
+    <DisplayName>ActLoad</DisplayName>
+    <Description>ActLoad</Description>
+    <References>
+      <Reference ReferenceType="HasProperty" IsForward="false">ns=1;i=2006</Reference>
+      <Reference ReferenceType="HasTypeDefinition">i=68</Reference>
+    </References>
+  </UAVariable>
+  <UAVariable NodeId="ns=1;i=2008" BrowseName="1:ActTorque" ParentNodeId="ns=1;i=2006" DataType="Int64">
+    <DisplayName>ActTorque</DisplayName>
+    <Description>ActTorque</Description>
+    <References>
+      <Reference ReferenceType="HasProperty" IsForward="false">ns=1;i=2006</Reference>
+      <Reference ReferenceType="HasTypeDefinition">i=68</Reference>
+    </References>
+  </UAVariable>
+  <UAVariable NodeId="ns=1;i=2009" BrowseName="1:CmdTorque" ParentNodeId="ns=1;i=2006" DataType="Int64">
+    <DisplayName>CmdTorque</DisplayName>
+    <Description>CmdTorque</Description>
+    <References>
+      <Reference ReferenceType="HasProperty" IsForward="false">ns=1;i=2006</Reference>
+      <Reference ReferenceType="HasTypeDefinition">i=68</Reference>
+    </References>
+  </UAVariable>
+  <UAVariable NodeId="ns=1;i=2010" BrowseName="1:ActOverride" ParentNodeId="ns=1;i=2006" DataType="Int64">
+    <DisplayName>ActOverride</DisplayName>
+    <Description>ActOverride</Description>
+    <References>
+      <Reference ReferenceType="HasProperty" IsForward="false">ns=1;i=2006</Reference>
+      <Reference ReferenceType="HasTypeDefinition">i=68</Reference>
+    </References>
+  </UAVariable>
+  <UAVariable NodeId="ns=1;i=2011" BrowseName="1:CmdOverride" ParentNodeId="ns=1;i=2006" DataType="Int64">
+    <DisplayName>CmdOverride</DisplayName>
+    <Description>CmdOverride</Description>
+    <References>
+      <Reference ReferenceType="HasProperty" IsForward="false">ns=1;i=2006</Reference>
+      <Reference ReferenceType="HasTypeDefinition">i=68</Reference>
+    </References>
+  </UAVariable>
+  <UAVariable NodeId="ns=1;i=2005" BrowseName="1:InitialOperationDate" ParentNodeId="ns=1;i=2001" DataType="String">
+    <DisplayName>InitialOperationDate</DisplayName>
+    <Description>InitialOperationDate</Description>
+    <References>
+      <Reference ReferenceType="HasProperty" IsForward="false">ns=1;i=2001</Reference>
+      <Reference ReferenceType="HasTypeDefinition">i=68</Reference>
+    </References>
+  </UAVariable>
+  <UAVariable NodeId="i=20204" BrowseName="3:ActSpeed" ParentNodeId="i=20195" DataType="Double" AccessLevel="3" UserAccessLevel="3" Historizing="true">
+    <DisplayName>ActSpeed</DisplayName>
+    <Description>Speed actual value.</Description>
+    <References>
+      <Reference ReferenceType="HasComponent" IsForward="false">i=20195</Reference>
+      <Reference ReferenceType="HasTypeDefinition">i=2368</Reference>
+      <Reference ReferenceType="HasProperty">i=20205</Reference>
+      <Reference ReferenceType="HasProperty">i=20206</Reference>
+    </References>
+  </UAVariable>
+  <UAVariable NodeId="i=20451" BrowseName="4:ControlIdentifier1" ParentNodeId="i=20450" DataType="UInt32" Historizing="true">
+    <DisplayName>ControlIdentifier1</DisplayName>
+    <References>
+      <Reference ReferenceType="HasComponent" IsForward="false">i=20450</Reference>
+      <Reference ReferenceType="HasTypeDefinition">i=63</Reference>
+    </References>
+  </UAVariable>
+  <UAObject NodeId="i=20458" BrowseName="4:ToolLife" ParentNodeId="i=20450">
+    <DisplayName>ToolLife</DisplayName>
+    <References>
+      <Reference ReferenceType="HasComponent" IsForward="false">i=20450</Reference>
+      <Reference ReferenceType="HasTypeDefinition">i=58</Reference>
+      <Reference ReferenceType="HasComponent">i=20459</Reference>
+    </References>
+  </UAObject>
+</UANodeSet>
