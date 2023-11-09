@@ -1,10 +1,8 @@
-import argparse
+import os
 import asyncio
 import asyncua
 import logging
 import time
-import numpy as np
-import matplotlib.pyplot as plt
 from asyncua import ua, Client
 
 _logger = logging.getLogger(__name__)
@@ -76,16 +74,27 @@ async def server_task(url):
             _logger.exception("An unexpected error occurred: ", exc_info=e)
             break  # Exit the loop for unexpected errors
 
-async def main(server_ips):
+async def main():
+    # read env variables from file
+    # with open('env_variables.env', 'r') as f:
+    #     for line in f:
+    #         key, value = line.strip().split('=', 1)
+    #         os.environ[key] = value
+            
+    # server_ips = os.getenv('SERVER_IPS').split(',')
+            
+    # read env variables from docker runtime input
+    server_ips_env = os.getenv('SERVER_IPS')
+    if server_ips_env:
+        server_ips = server_ips_env.split(',')
+    else:
+        _logger.error('The SERVER_IPS environment variable is not set.')
+        exit(1)  # Exit if the environment variable is not set
+    
     server_urls = [f"opc.tcp://{ip}:4840" for ip in server_ips]
     tasks = [server_task(url) for url in server_urls]
     await asyncio.gather(*tasks)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Connect to multiple OPC UA servers using IP addresses.')
-    parser.add_argument('ips', nargs='+', help='List of server IP addresses to connect to.')
-    
-    args = parser.parse_args()
-    
     logging.basicConfig(level=logging.INFO)
     asyncio.run(main())
