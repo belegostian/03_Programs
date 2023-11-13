@@ -4,6 +4,8 @@ from collections import defaultdict
 import networkx as nx
 import matplotlib.pyplot as plt
 
+_logger = logging.getLogger(__name__)
+
 G = nx.Graph()
 G.add_nodes_from(['sw1', 'sw0', 'sw3', 'sw2', 'dev1', 'dev2', 'dev3', 'dev4', 'dev5', 'dev6', 'dev7', 'dev8', 'dev9', 'dev10', 'dev11', 'dev12', 'dev13', 'dev14', 'dev15', 'dev16', 'dev17', 'dev18', 'dev19', 'dev20', 'comp1', 'comp2',
 'comp3', 'comp4', 'app1_comp1', 'app2_comp1', 'app1_comp2', 'app3_comp2', 'app2_comp2', 'app4_comp2', 'app3_comp3', 'app4_comp3', 'app2_comp4', 'app4_comp4'])
@@ -68,7 +70,7 @@ def shortest_path(G, subscription_dict):
                 if shortest_path is None or len(path) < len(shortest_path):
                     shortest_path = path
             except nx.NetworkXNoPath:
-                logging.info(f"No path from {device} to {possible_app}")
+                _logger.info(f"No path from {device} to {possible_app}")
                 continue
 
             if shortest_path:
