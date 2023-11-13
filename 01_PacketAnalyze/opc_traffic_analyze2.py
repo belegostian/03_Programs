@@ -4,10 +4,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import logging
 
-SERVER_IP = '10.0.0.252'                                                # (string): 伺服器/主機IP
-EXPECTED_SESSION_COUNT = 4                                                         # (int): 伺服器/主機同時處理的session數量
-CAPTURE_FILE = 'Traffic_Capture (Mininet)\Container_test_topo.pcapng'     # (string): 擷取封包檔案路徑
-TIME_INTERVAL = 1                                                     # (int): 數據平均的時間間隔 -秒
+SERVER_IP = '10.0.0.100'                                                # (string): 伺服器/主機IP
+EXPECTED_SESSION_COUNT = 3                                                         # (int): 伺服器/主機同時處理的session數量
+CAPTURE_FILE = 'Traffic_Capture (Mininet)\multi_server_single_client.pcapng'     # (string): 擷取封包檔案路徑
+TIME_INTERVAL = 6                                                     # (int): 數據平均的時間間隔 -秒
 
 # PART 1: 依照時間間隔取得封包物件
 def update_time_interval(packet, start_time, end_time):
