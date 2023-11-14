@@ -85,7 +85,7 @@ async def main():
     # server_ips = os.getenv('SERVER_IPS').split(',')
             
     # read env variables from docker runtime input
-    server_ips_env = os.getenv('SERVER_IPS')
+    server_ips_env = os.getenv('JS_SERVER_IPS')
     if server_ips_env:
         server_ips = server_ips_env.split(',')
     else:

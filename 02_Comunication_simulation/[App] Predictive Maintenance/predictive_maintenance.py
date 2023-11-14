@@ -74,7 +74,7 @@ async def server_task(url):
 
 async def main():            
     # read env variables from docker runtime input
-    server_ips_env = os.getenv('SERVER_IPS')
+    server_ips_env = os.getenv('PM_SERVER_IPS')
     if server_ips_env:
         server_ips = server_ips_env.split(',')
     else:
