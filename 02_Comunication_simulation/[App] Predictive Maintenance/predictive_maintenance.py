@@ -43,14 +43,15 @@ async def server_task(url):
                     actual_torque = await client.get_node(Node_Dict['ActTorque']).read_value()
                     _logger.info("ActTorque: %s", actual_torque)
                     
-                    command_torque = await client.get_node(Node_Dict['CmdTorque']).read_value()
-                    _logger.info("CmdTorque: %s", command_torque)
+                    #TODO 這邊有問題，讀取不到值
+                    # command_torque = await client.get_node(Node_Dict['CmdTorque']).read_value()
+                    # _logger.info("CmdTorque: %s", command_torque)
                     
-                    actual_override = await client.get_node(Node_Dict['ActOverride']).read_value()
-                    _logger.info("ActOverride: %s", actual_override)
+                    # actual_override = await client.get_node(Node_Dict['ActOverride']).read_value()
+                    # _logger.info("ActOverride: %s", actual_override)
                     
-                    command_override = await client.get_node(Node_Dict['CmdOverride']).read_value()
-                    _logger.info("CmdOverride: %s", command_override)
+                    # command_override = await client.get_node(Node_Dict['CmdOverride']).read_value()
+                    # _logger.info("CmdOverride: %s", command_override)
                     
                     initial_operation_date = await client.get_node(Node_Dict['InitialOperationDate']).read_value()
                     _logger.info("InitialOperationDate: %s", initial_operation_date)
@@ -72,14 +73,24 @@ async def server_task(url):
             _logger.exception("An unexpected error occurred: ", exc_info=e)
             break
 
-async def main():            
+async def main():    
+    # read env variables from file
+    # with open('env_variables.env', 'r') as f:
+    #     for line in f:
+    #         key, value = line.strip().split('=', 1)
+    #         os.environ[key] = value
+    # server_ips = os.getenv('SERVER_IPS').split(',')
+            
     # read env variables from docker runtime input
     server_ips_env = os.getenv('PM_SERVER_IPS')
     if server_ips_env:
         server_ips = server_ips_env.split(',')
     else:
         _logger.error('The SERVER_IPS environment variable is not set.')
-        exit(1)  # Exit if the environment variable is not set
+        exit(1)
+        
+    # for testing
+    # server_ips = ['127.0.0.1']
     
     server_urls = [f"opc.tcp://{ip}:4840" for ip in server_ips]
     tasks = [server_task(url) for url in server_urls]

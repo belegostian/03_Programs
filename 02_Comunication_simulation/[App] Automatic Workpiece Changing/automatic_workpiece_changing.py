@@ -72,6 +72,9 @@ async def main():
         _logger.error('The SERVER_IPS environment variable is not set.')
         exit(1)  # Exit if the environment variable is not set
     
+    # for testing
+    # server_ips = ['127.0.0.1']
+    
     server_urls = [f"opc.tcp://{ip}:4840" for ip in server_ips]
     tasks = [server_task(url) for url in server_urls]
     await asyncio.gather(*tasks)

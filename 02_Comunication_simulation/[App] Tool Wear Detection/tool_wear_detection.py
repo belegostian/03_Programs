@@ -39,8 +39,9 @@ async def server_task(url):
                     control_identifier = await client.get_node(Node_Dict['ControlIdentifier1']).read_value()
                     _logger.info("ControlIdentifier: %s", control_identifier)
                     
-                    tool_life = await client.get_node(Node_Dict['ToolLife']).read_value()
-                    _logger.info("ToolLife: %s", tool_life)
+                    # TODO: 這邊有問題，讀取不到值
+                    # tool_life = await client.get_node(Node_Dict['ToolLife']).read_value()
+                    # _logger.info("ToolLife: %s", tool_life)
                     
                     elapsed = time.time() - start_time
                     sleep_time = max(polling_interval - elapsed, 0)
@@ -56,14 +57,24 @@ async def server_task(url):
             _logger.exception("An unexpected error occurred: ", exc_info=e)
             break
 
-async def main():            
+async def main():
+    # read env variables from file
+    # with open('env_variables.env', 'r') as f:
+    #     for line in f:
+    #         key, value = line.strip().split('=', 1)
+    #         os.environ[key] = value
+    # server_ips = os.getenv('SERVER_IPS').split(',')
+    
     # read env variables from docker runtime input
     server_ips_env = os.getenv('TWD_SERVER_IPS')
     if server_ips_env:
         server_ips = server_ips_env.split(',')
     else:
         _logger.error('The SERVER_IPS environment variable is not set.')
-        exit(1)  # Exit if the environment variable is not set
+        exit(1)
+    
+    # for testing
+    # server_ips = ['127.0.0.1']
     
     server_urls = [f"opc.tcp://{ip}:4840" for ip in server_ips]
     tasks = [server_task(url) for url in server_urls]

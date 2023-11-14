@@ -8,7 +8,6 @@
   </NamespaceUris>
   <Aliases>
     <Alias Alias="UInt32">i=7</Alias>
-    <Alias Alias="Int64">i=8</Alias>
     <Alias Alias="Double">i=11</Alias>
     <Alias Alias="String">i=12</Alias>
     <Alias Alias="Organizes">i=35</Alias>
@@ -309,7 +308,7 @@
       <Reference ReferenceType="HasTypeDefinition">i=2365</Reference>
     </References>
   </UAVariable>
-  <UAVariable NodeId="ns=1;i=2007" BrowseName="1:ActLoad" ParentNodeId="ns=1;i=2006" DataType="Int64">
+  <UAVariable NodeId="ns=1;i=2007" BrowseName="1:ActLoad" ParentNodeId="ns=1;i=2006" DataType="Double">
     <DisplayName>ActLoad</DisplayName>
     <Description>ActLoad</Description>
     <References>
@@ -317,7 +316,7 @@
       <Reference ReferenceType="HasTypeDefinition">i=68</Reference>
     </References>
   </UAVariable>
-  <UAVariable NodeId="ns=1;i=2008" BrowseName="1:ActTorque" ParentNodeId="ns=1;i=2006" DataType="Int64">
+  <UAVariable NodeId="ns=1;i=2008" BrowseName="1:ActTorque" ParentNodeId="ns=1;i=2006" DataType="Double">
     <DisplayName>ActTorque</DisplayName>
     <Description>ActTorque</Description>
     <References>
@@ -325,7 +324,7 @@
       <Reference ReferenceType="HasTypeDefinition">i=68</Reference>
     </References>
   </UAVariable>
-  <UAVariable NodeId="ns=1;i=2009" BrowseName="1:CmdTorque" ParentNodeId="ns=1;i=2006" DataType="Int64">
+  <UAVariable NodeId="ns=1;i=2009" BrowseName="1:CmdTorque" ParentNodeId="ns=1;i=2006" DataType="Double">
     <DisplayName>CmdTorque</DisplayName>
     <Description>CmdTorque</Description>
     <References>
@@ -333,7 +332,7 @@
       <Reference ReferenceType="HasTypeDefinition">i=68</Reference>
     </References>
   </UAVariable>
-  <UAVariable NodeId="ns=1;i=2010" BrowseName="1:ActOverride" ParentNodeId="ns=1;i=2006" DataType="Int64">
+  <UAVariable NodeId="ns=1;i=2010" BrowseName="1:ActOverride" ParentNodeId="ns=1;i=2006" DataType="Double">
     <DisplayName>ActOverride</DisplayName>
     <Description>ActOverride</Description>
     <References>
@@ -341,7 +340,7 @@
       <Reference ReferenceType="HasTypeDefinition">i=68</Reference>
     </References>
   </UAVariable>
-  <UAVariable NodeId="ns=1;i=2011" BrowseName="1:CmdOverride" ParentNodeId="ns=1;i=2006" DataType="Int64">
+  <UAVariable NodeId="ns=1;i=2011" BrowseName="1:CmdOverride" ParentNodeId="ns=1;i=2006" DataType="Double">
     <DisplayName>CmdOverride</DisplayName>
     <Description>CmdOverride</Description>
     <References>
