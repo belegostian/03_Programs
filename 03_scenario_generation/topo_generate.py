@@ -1,5 +1,6 @@
 import os
 import csv
+import json
 import random
 import logging
 from collections import defaultdict
@@ -131,7 +132,7 @@ def add_app_nodes_to_topology(G, application_dict, computer_dict, plot=False, it
         )
         plt.title("Updated Network Topology with Applications")
         # plt.show()
-        plt.savefig(f"scenario 1/scenario_{iteration}.png", format='PNG', dpi=300)
+        plt.savefig(f"experiment_0/scenario_{iteration}/scenario_{iteration}.png", format='PNG', dpi=300)
 
     return G
 
@@ -157,102 +158,59 @@ def write_to_csv(file_name, nodes, edges):
         writer.writerows(edges)
 
 def main(G, iteration):
-    device_dict = {
-        "dev1": {"type": "CNC", "bandwidth": 100, "group": 1},
-        "dev2": {"type": "CNC", "bandwidth": 100, "group": 1},
-        "dev3": {"type": "CNC", "bandwidth": 100, "group": 1},
-        "dev4": {"type": "CNC", "bandwidth": 100, "group": 1},
-        "dev5": {"type": "CNC", "bandwidth": 1000, "group": 1},
-        "dev6": {"type": "CNC", "bandwidth": 1000, "group": 1},
-        "dev7": {"type": "CNC", "bandwidth": 100, "group": 2},
-        "dev8": {"type": "CNC", "bandwidth": 100, "group": 2},
-        "dev9": {"type": "CNC", "bandwidth": 100, "group": 2},
-        "dev10": {"type": "CNC", "bandwidth": 100, "group": 2},
-        "dev11": {"type": "CNC", "bandwidth": 1000, "group": 2},
-        "dev12": {"type": "CNC", "bandwidth": 1000, "group": 2},
-        "dev13": {"type": "CNC", "bandwidth": 100, "group": 3},
-        "dev14": {"type": "CNC", "bandwidth": 100, "group": 3},
-        "dev15": {"type": "CNC", "bandwidth": 100, "group": 3},
-        "dev16": {"type": "CNC", "bandwidth": 100, "group": 3},
-        "dev17": {"type": "CNC", "bandwidth": 1000, "group": 3},
-        "dev18": {"type": "CNC", "bandwidth": 1000, "group": 3},
-        "dev19": {"type": "CNC", "bandwidth": 1000, "group": 3},
-        "dev20": {"type": "CNC", "bandwidth": 1000, "group": 3},
-    }
-    application_dict = {
-        "app1": {
-            "name": "Job Scheduling",
-            "response_timeout": False,
-            "cpu_usage": False,
-            "memory_usage": False,
-            "packet_sending": False,
-            "packet_receiving": "app1",
-            "target_device": ["CNC"],
-        },
-        "app2": {
-            "name": "automatic workpiece changing",
-            "response_timeout": False,
-            "cpu_usage": False,
-            "memory_usage": False,
-            "packet_sending": False,
-            "packet_receiving": "app2",
-            "target_device": ["CNC"],
-        },
-        "app3": {
-            "name": "Tool Wear Detection",
-            "response_timeout": False,
-            "cpu_usage": False,
-            "memory_usage": False,
-            "packet_sending": False,
-            "packet_receiving": "app3",
-            "target_device": ["CNC"],
-        },
-        "app4": {
-            "name": "Predictive Maintenance",
-            "response_timeout": False,
-            "cpu_usage": False,
-            "memory_usage": False,
-            "packet_sending": False,
-            "packet_receiving": "app4",
-            "target_device": ["CNC"],
-        },
-    }
-    computer_dict = {
-        "comp1": {
-            "cpu": 0.8,
-            "memory": False,
-            "bandwidth": 1000,
-            "group": None,
-            "running_apps": [],
-        },
-        "comp2": {
-            "cpu": 1,
-            "memory": False,
-            "bandwidth": 1000,
-            "group": None,
-            "running_apps": [],
-        },
-        "comp3": {
-            "cpu": 0.4,
-            "memory": False,
-            "bandwidth": 1000,
-            "group": None,
-            "running_apps": [],
-        },
-        "comp4": {
-            "cpu": 0.4,
-            "memory": False,
-            "bandwidth": 1000,
-            "group": None,
-            "running_apps": [],
-        },
-    }
-    switch_dict = {
-        "sw0": {"bandwidth": 1000, "forward_delay": False},
-        "sw1": {"bandwidth": 1000, "forward_delay": False},
-        "sw2": {"bandwidth": 1000, "forward_delay": False},
-        "sw3": {"bandwidth": 1000, "forward_delay": False},
-    }
+    device_dict = {}
+    with open('experiment_0\\devices.csv', 'r') as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            device = row.pop('device')
+            device_dict[device] = row
+
+    # 轉型
+    for device in device_dict:
+        device_dict[device]['bandwidth'] = int(device_dict[device]['bandwidth'])
+        device_dict[device]['group'] = int(device_dict[device]['group'])
+            
+    application_dict = {}
+    with open('experiment_0\\applications.csv', 'r') as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            app = row.pop('application')
+            # Split the string back into a list
+            row['target_device'] = row['target_device'].split(', ')
+            application_dict[app] = row
+            
+    for app in application_dict:
+        application_dict[app]['response_timeout'] = float(application_dict[app]['response_timeout'])
+        application_dict[app]['cpu_usage'] = float(application_dict[app]['cpu_usage'])
+        application_dict[app]['memory_usage'] = float(application_dict[app]['memory_usage'])
+        application_dict[app]['packet_sending'] = int(application_dict[app]['packet_sending'])
+        application_dict[app]['packet_receiving'] = int(application_dict[app]['packet_receiving'])
+        
+    computer_dict = {}
+    with open('experiment_0\\computers.csv', 'r') as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            computer = row.pop('computer')
+            # Deserialize the list from a string
+            row['running_apps'] = json.loads(row['running_apps'])
+            # Convert numeric values back to appropriate types
+            row['cpu'] = float(row['cpu'])
+            row['memory'] = int(row['memory'])
+            row['bandwidth'] = int(row['bandwidth'])
+            row['group'] = None if row['group'] == '' else int(row['group'])
+            computer_dict[computer] = row
+
+    switch_dict = {}
+    with open('experiment_0\\switches.csv', 'r') as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            switch = row.pop('switch')
+            switch_dict[switch] = row
+            
+    for switch in switch_dict:
+        switch_dict[switch]['bandwidth'] = int(switch_dict[switch]['bandwidth'])
+        switch_dict[switch]['forward_delay'] = float(switch_dict[switch]['forward_delay'])
+
     
     computer_dict = assign_computer_group(computer_dict, len(switch_dict))
     computer_dict = assign_apps_to_computer(computer_dict, application_dict)
@@ -263,15 +221,16 @@ def main(G, iteration):
     # app_to_topo = add_app_nodes_to_topology(computer_to_topo, application_dict, computer_dict, plot=True)
     app_to_topo = add_app_nodes_to_topology(computer_to_topo, application_dict, computer_dict, plot=True, iteration=iteration)
     
-    csv_filename = f'scenario 1/scenario_{iteration}.csv'
+    csv_filename = f'experiment_0/scenario_{iteration}/scenario_{iteration}.csv'
     write_to_csv(csv_filename, app_to_topo.nodes, app_to_topo.edges)
 
 if __name__ == "__main__":
     n = 5
     G = nx.Graph()
-    create_directory('scenario 1')
+    create_directory('experiment_0')
     
     for i in range(n):
+        create_directory(f'experiment_0/scenario_{i}')
         G.clear()
         main(G, i)
     pause = input("Press any key to exit...")

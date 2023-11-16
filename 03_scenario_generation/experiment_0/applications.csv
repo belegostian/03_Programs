@@ -1,0 +1,5 @@
+application,name,response_timeout,cpu_usage,memory_usage,packet_sending,packet_receiving,target_device
+app1,Job Scheduling,1.0,0.9,0.8,100,500,CNC
+app2,automatic workpiece changing,1.0,0.9,0.8,100,500,CNC
+app3,Tool Wear Detection,1.0,0.9,0.8,100,500,CNC
+app4,Predictive Maintenance,1.0,0.9,0.8,100,500,"CNC, Robot"

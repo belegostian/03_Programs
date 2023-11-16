@@ -1,0 +1,5 @@
+switch,bandwidth,forward_delay
+sw0,1000,0.05
+sw1,1000,0.05
+sw2,1000,0.05
+sw3,1000,0.05
