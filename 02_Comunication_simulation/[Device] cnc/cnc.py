@@ -6,7 +6,7 @@ from asyncua.common.instantiate_util import instantiate
 from asyncua.common.xmlexporter import XmlExporter
 
 SERVER_URL = 'opc.tcp://0.0.0.0:4840'
-SERVER_NAME = 'Test CNC Server'
+SERVER_NAME = 'CNC Server'
 
 _logger = logging.getLogger(__name__)
 
@@ -62,11 +62,11 @@ class CNCServer:
         
         # https://reference.opcfoundation.org/CNC/v100/docs/6.7
         driving = await cnc.add_object(nodeid=1, bname='1:Drive')
-        await driving.add_property(nodeid=1, bname='ActLoad', datatype=ua.Double(), val=0.0)
-        await driving.add_property(nodeid=1, bname='ActTorque', datatype=ua.Double(), val=0.0)
-        await driving.add_property(nodeid=1, bname='CmdTorque', datatype=ua.Double(), val=0.0)
-        await driving.add_property(nodeid=1, bname='ActOverride', datatype=ua.Double(), val=0.0)
-        await driving.add_property(nodeid=1, bname='CmdOverride', datatype=ua.Double(), val=0.0)
+        await driving.add_property(nodeid=1, bname='ActLoad', datatype=ua.Double(), val=0)
+        await driving.add_property(nodeid=1, bname='ActTorque', datatype=ua.Double(), val=0)
+        await driving.add_property(nodeid=1, bname='CmdTorque', datatype=ua.Double(), val=0)
+        await driving.add_property(nodeid=1, bname='ActOverride', datatype=ua.Double(), val=0)
+        await driving.add_property(nodeid=1, bname='CmdOverride', datatype=ua.Double(), val=0)
                 
         spindle_int = await instantiate(
             await cnc.get_child('4:CncSpindleList'),

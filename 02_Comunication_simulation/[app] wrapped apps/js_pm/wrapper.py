@@ -3,6 +3,8 @@ import subprocess
 def run_all_scripts():
     print("Running all scripts concurrently")
     process = []
+    process.append(subprocess.Popen(['python3', 'job_scheduling.py']))
+    process.append(subprocess.Popen(['python3', 'predictive_maintenance.py']))
     
     for p in process:
         p.wait()

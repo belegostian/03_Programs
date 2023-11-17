@@ -19,6 +19,7 @@ def modify_dockerfile(subfolder_path, python_scripts):
     # Generate new COPY commands
     new_copy_commands = [f"COPY ./{os.path.basename(script)} /app/{os.path.basename(script)}\n" for script in python_scripts]
     new_copy_commands.append("COPY ./wrapper.py /app/wrapper.py\n")
+    new_copy_commands.append("COPY ./requirements.txt /app/requirements.txt\n")
 
     # Replace the line
     dockerfile_content[replacement_index:replacement_index + 1] = new_copy_commands
@@ -45,15 +46,15 @@ def modify_wrapper_py(subfolder_path, python_scripts):
     with open(wrapper_path, 'w') as file:
         file.writelines(wrapper_content)
 
-# Create "[App] wrapped" folder
-wrapped_folder = '[App] Wrapped Apps'
+# Create "[app] wrapped" folder
+wrapped_folder = '[app] wrapped apps'
 if not os.path.exists(wrapped_folder):
     os.makedirs(wrapped_folder)
 
-# List Python scripts from "[App]" folders
+# List Python scripts from "[app]" folders
 python_files = {}
 for root, dirs, files in os.walk('.'):
-    if '[App]' in os.path.basename(root):
+    if '[app]' in os.path.basename(root):
         python_files_in_dir = [os.path.join(root, file) for file in files if file.endswith('.py')]
         if python_files_in_dir:
             python_files[root] = python_files_in_dir
@@ -88,15 +89,15 @@ for subfolder in os.listdir(wrapped_folder):
         modify_dockerfile(subfolder_path, python_scripts_in_subfolder)
         
         # 以下在Windows OS未經測試
-        # os.chdir(subfolder_path)
+        os.chdir(subfolder_path)
         
-        # subprocess.run(['pipreqs', '--force'])
+        subprocess.run(['pipreqs', '--force'])
         
-        # tag = datetime.now().strftime("%m-%d-%M-%S")
-        # image_name = f"{subfolder.lower()}:{tag}"
-        # subprocess.run(['docker', 'build', '--pull', '--rm', '-f', 'Dockerfile', '-t', image_name, '.'])
+        tag = datetime.now().strftime("%m-%d-%H")
+        image_name = f"{subfolder.lower()}:{tag}"
+        subprocess.run(['sudo', 'docker', 'build', '--pull', '--rm', '-f', 'Dockerfile', '-t', image_name, '.'])
         
-        # os.chdir('../../')
+        os.chdir('../../')
         
 
 print("Operation completed.")

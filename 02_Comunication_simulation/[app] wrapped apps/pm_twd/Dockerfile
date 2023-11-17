@@ -14,7 +14,10 @@ RUN python -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 # Copy the current directory contents into the container at /app
-COPY . /app
+COPY ./tool_wear_detection.py /app/tool_wear_detection.py
+COPY ./predictive_maintenance.py /app/predictive_maintenance.py
+COPY ./wrapper.py /app/wrapper.py
+COPY ./requirements.txt /app/requirements.txt
 
 # Set the working directory to /app
 WORKDIR /app
