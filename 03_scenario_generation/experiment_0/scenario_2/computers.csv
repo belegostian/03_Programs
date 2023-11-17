@@ -1,0 +1,5 @@
+computer,cpu,memory,bandwidth,group,running_apps
+comp1,0.75,192,1000,3,['app2']
+comp2,1.0,256,1000,0,"['app1', 'app4']"
+comp3,0.375,96,1000,1,['app3']
+comp4,0.375,96,1000,3,[]

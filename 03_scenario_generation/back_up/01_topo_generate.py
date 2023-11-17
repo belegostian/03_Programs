@@ -3,6 +3,7 @@ import csv
 import json
 import random
 import logging
+import re
 from collections import defaultdict
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -43,6 +44,12 @@ def assign_apps_to_computer(computer_dict, application_dict):
         for assigned_computer in valid_computers[:num_additional_computers]:
             computer_dict[assigned_computer]["running_apps"].append(app)
 
+    def extract_number(app_name):
+        return int(''.join(filter(str.isdigit, app_name)))
+    
+    for computer_keys in computer_dict:
+        computer_dict[computer_keys]["running_apps"].sort(key=extract_number)
+    
     return computer_dict
 
 # print(computer_dict)
@@ -181,10 +188,10 @@ def main(G, iteration):
             
     for app in application_dict:
         application_dict[app]['response_timeout'] = float(application_dict[app]['response_timeout'])
-        application_dict[app]['cpu_usage'] = float(application_dict[app]['cpu_usage'])
-        application_dict[app]['memory_usage'] = float(application_dict[app]['memory_usage'])
-        application_dict[app]['packet_sending'] = int(application_dict[app]['packet_sending'])
-        application_dict[app]['packet_receiving'] = int(application_dict[app]['packet_receiving'])
+        application_dict[app]['cpu_usage (%)'] = float(application_dict[app]['cpu_usage (%)'])
+        application_dict[app]['memory_usage (MiB)'] = float(application_dict[app]['memory_usage (MiB)'])
+        application_dict[app]['packet_sending (kB)'] = float(application_dict[app]['packet_sending (kB)'])
+        application_dict[app]['packet_receiving (kB)'] = float(application_dict[app]['packet_receiving (kB)'])
         
     computer_dict = {}
     with open('experiment_0\\computers.csv', 'r') as file:
@@ -214,6 +221,27 @@ def main(G, iteration):
     
     computer_dict = assign_computer_group(computer_dict, len(switch_dict))
     computer_dict = assign_apps_to_computer(computer_dict, application_dict)
+    
+    rows = []
+    for computer, attributes in computer_dict.items():
+        running_apps_str = ','.join(attributes['running_apps'])
+        row = {
+            "computer": computer, 
+            "cpu": attributes['cpu'],
+            "memory": attributes['memory'],
+            "bandwidth": attributes['bandwidth'],
+            "group": attributes['group'],
+            "running_apps": running_apps_str
+        }
+        rows.append(row)
+
+    csv_file = f'experiment_0\\scenario_{iteration}\\computers.csv'
+
+    with open(csv_file, 'w', newline='') as file:
+        writer = csv.DictWriter(file, fieldnames=["computer", "cpu", "memory", "bandwidth", "group", "running_apps"])
+        writer.writeheader()
+        writer.writerows(rows)
+    
     
     switch_to_topo = generate_topology(G, switch_dict)
     device_to_topo = add_nodes_to_topology(switch_to_topo, device_dict)
