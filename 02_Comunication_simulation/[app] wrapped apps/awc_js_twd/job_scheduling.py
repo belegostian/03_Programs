@@ -1,4 +1,5 @@
 import os
+import re
 import asyncio
 import asyncua
 import logging
@@ -94,6 +95,12 @@ async def main():
         
     # for testing
     # server_ips = ['127.0.0.1']
+    
+    ip_pattern = re.compile(r'^\d{1,3}(\.\d{1,3}){3}$')
+    valid_ips = [ip for ip in server_ips if ip_pattern.match(ip)]
+    if not valid_ips:
+        print("No valid IPs found.")
+        return    
     
     server_urls = [f"opc.tcp://{ip}:4840" for ip in server_ips]
     tasks = [server_task(url) for url in server_urls]

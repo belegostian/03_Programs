@@ -1,4 +1,5 @@
 import os
+import re
 import asyncio
 import asyncua
 import logging
@@ -47,7 +48,7 @@ async def server_task(url):
                     
                     await asyncio.sleep(sleep_time) # 大概還會誤差0.01秒
                 
-        except (OSError, asyncua.ua.uaerrors._base.UaError) as e:
+        except (OSError, asyncua.ua.uaerrors._base.UaError, asyncio.TimeoutError) as e:
             _logger.error(f"Connection failed: {e}")
             _logger.info("Attempting to reconnect in 5 seconds...")
             await asyncio.sleep(5)
@@ -70,10 +71,16 @@ async def main():
         server_ips = server_ips_env.split(',')
     else:
         _logger.error('The SERVER_IPS environment variable is not set.')
-        exit(1)  # Exit if the environment variable is not set
+        exit(1)
     
     # for testing
-    # server_ips = ['127.0.0.1']
+    # server_ips = ['']
+    
+    ip_pattern = re.compile(r'^\d{1,3}(\.\d{1,3}){3}$')
+    valid_ips = [ip for ip in server_ips if ip_pattern.match(ip)]
+    if not valid_ips:
+        print("No valid IPs found.")
+        return
     
     server_urls = [f"opc.tcp://{ip}:4840" for ip in server_ips]
     tasks = [server_task(url) for url in server_urls]

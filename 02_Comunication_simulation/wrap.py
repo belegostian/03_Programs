@@ -95,7 +95,12 @@ for subfolder in os.listdir(wrapped_folder):
         
         tag = datetime.now().strftime("%m-%d-%H")
         image_name = f"{subfolder.lower()}:{tag}"
+        
+        # for linux
         subprocess.run(['sudo', 'docker', 'build', '--pull', '--rm', '-f', 'Dockerfile', '-t', image_name, '.'])
+        
+        # for windows
+        # subprocess.run(['docker', 'build', '--pull', '--rm', '-f', 'Dockerfile', '-t', image_name, '.'])
         
         os.chdir('../../')
         
