@@ -220,7 +220,7 @@ def main(file_path):
         lines.insert(insert_index, link_line)
         insert_index += 1
 
-    with open(os.path.join(file_path, 'containernet.py'), 'w') as file:
+    with open(os.path.join(file_path, 'containernet_script.py'), 'w') as file:
         file.writelines(lines)
 
 if __name__ == "__main__":
