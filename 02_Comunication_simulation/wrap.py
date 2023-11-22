@@ -58,6 +58,18 @@ for root, dirs, files in os.walk('.'):
         python_files_in_dir = [os.path.join(root, file) for file in files if file.endswith('.py')]
         if python_files_in_dir:
             python_files[root] = python_files_in_dir
+            
+        # 以下在Windows OS未經測試
+        os.chdir(root)
+
+        # Format image_name: remove '[app]', strip spaces, and replace spaces with underscores
+        dir_name = os.path.basename(root)
+        image_name = dir_name.replace('[app]', '').strip().replace(' ', '_')
+        tag = 'ver2'
+        image_name = f"{image_name.lower()}:{tag}"
+
+        subprocess.run(['sudo', 'docker', 'build', '--pull', '--rm', '-f', 'Dockerfile', '-t', image_name, '.'])
+        os.chdir('..')
 
 # Generate combinations and create subfolders
 for num in range(2, len(python_files) + 1):
@@ -96,13 +108,7 @@ for subfolder in os.listdir(wrapped_folder):
         tag = datetime.now().strftime("%m-%d-%H")
         image_name = f"{subfolder.lower()}:{tag}"
         
-        # for linux
         subprocess.run(['sudo', 'docker', 'build', '--pull', '--rm', '-f', 'Dockerfile', '-t', image_name, '.'])
-        
-        # for windows
-        # subprocess.run(['docker', 'build', '--pull', '--rm', '-f', 'Dockerfile', '-t', image_name, '.'])
-        
         os.chdir('../../')
-        
 
 print("Operation completed.")
