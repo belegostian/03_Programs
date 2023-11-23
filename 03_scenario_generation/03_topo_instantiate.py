@@ -1,4 +1,5 @@
 import os
+import re
 import csv
 import ast
 import logging
@@ -222,6 +223,35 @@ def main(file_path):
 
     with open(os.path.join(file_path, 'containernet_script.py'), 'w') as file:
         file.writelines(lines)
+    
+    # 補充：移除沒有連線對象的電腦
+    with open(os.path.join(file_path, 'containernet_script.py'), 'r') as file:
+        lines = file.readlines()
+        
+    docker_containers = {}
+    
+    for line in lines:
+        if 'net.addDocker' in line:
+            container_name = re.search(r"addDocker\('([^']+)'", line).group(1)
+            environment = re.search(r'environment=\{([^\}]+)\}', line)
+            if environment:
+                environment_values = environment.group(1)
+                key_value_pairs = [val.split(':') for val in environment_values.split(',')]
+                all_empty = all(k.strip().strip('"') == "" for _, k in key_value_pairs)
+                docker_containers[container_name] = all_empty
+    
+    new_lines = []
+    for line in lines:
+        if 'net.addLink' in line:
+            link_params = re.findall(r"addLink\(([^,]+),", line)
+            if any(docker_containers.get(param.strip("'"), False) for param in link_params):
+                continue
+        new_lines.append(line)
+        
+    with open(os.path.join(file_path, 'containernet_script.py'), 'w') as file:
+        file.writelines(new_lines)
+    
+    
 
 if __name__ == "__main__":
     scenario_num = 5
