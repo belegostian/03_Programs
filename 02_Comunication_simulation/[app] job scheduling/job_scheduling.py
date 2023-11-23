@@ -68,7 +68,7 @@ async def server_task(url):
                     
                     await asyncio.sleep(sleep_time) 
                 
-        except (OSError, asyncua.ua.uaerrors._base.UaError) as e:
+        except (OSError, asyncua.ua.uaerrors._base.UaError, asyncio.TimeoutError) as e:
             _logger.error(f"Connection failed: {e}")
             _logger.info("Attempting to reconnect in 5 seconds...")
             await asyncio.sleep(5) # 每5秒嘗試重新連線

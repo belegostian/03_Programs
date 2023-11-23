@@ -184,7 +184,7 @@ def main(file_path):
         environment_str = ', '.join([f'"{k}": "{v}"' for k, v in env_vars.items()])
         environment_str = "{" + environment_str + "}"
         
-        insert_line = f"{computer_name} = net.addDocker('{computer_name}', ip='{ip}', dcmd='python {python_script}', dimage='{docker_image}:{tag_version}', mem_limit='{memory_limit}', memswap_limit='{memory_add_swap_limit}', cpu_period='{cpu_period_default}', cpu_quota='{cpu_quota}', environment={environment_str})\n" # , environment={environment_str}
+        insert_line = f"{computer_name} = net.addDocker('{computer_name}', ip='{ip}', dcmd='python {python_script}', dimage='{docker_image}:{tag_version}', mem_limit='{memory_limit}', memswap_limit='{memory_add_swap_limit}', cpu_period={cpu_period_default}, cpu_quota={cpu_quota}, environment={environment_str})\n" # , environment={environment_str}
         lines.insert(insert_index, insert_line)
         insert_index += 1
         ip_base += 1
