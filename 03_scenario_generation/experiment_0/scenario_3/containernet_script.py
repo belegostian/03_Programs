@@ -4,7 +4,7 @@ from mininet.net import Containernet
 from mininet.node import Controller
 from mininet.cli import CLI
 from mininet.link import TCLink
-from mininet.log import setLogLevel
+from mininet.log import info ,setLogLevel
 
 setLogLevel("info")
 
@@ -12,9 +12,9 @@ net = Containernet(controller=Controller)
 net.addController("c0")
 
 info('*** Adding docker containers as hosts\n')
-comp4 = net.addDocker('comp4', ip='10.0.0.210', dcmd='python wrapper.py', dimage='js_awc_pm:11-15-22', mem_limit='96m', memswap_limit='288m', cpu_period='100000', cpu_quota='37500', environment={"JS_SERVER_IPS": "10.0.0.110,10.0.0.111,10.0.0.112,10.0.0.113,10.0.0.114,10.0.0.115,10.0.0.120,10.0.0.121,10.0.0.122,10.0.0.123,10.0.0.124,10.0.0.125", "AWC_SERVER_IPS": "", "PM_SERVER_IPS": ""})
-comp1 = net.addDocker('comp1', ip='10.0.0.220', dcmd='python wrapper.py', dimage='js_twd:11-15-22', mem_limit='192m', memswap_limit='576m', cpu_period='100000', cpu_quota='75000', environment={"JS_SERVER_IPS": "", "TWD_SERVER_IPS": "10.0.0.134,10.0.0.135,10.0.0.136,10.0.0.137"})
-comp3 = net.addDocker('comp3', ip='10.0.0.221', dcmd='python predictive_maintenance.py', dimage='predictive_maintenance:ver1', mem_limit='96m', memswap_limit='288m', cpu_period='100000', cpu_quota='37500', environment={"PM_SERVER_IPS": "10.0.0.130,10.0.0.131"})
+comp4 = net.addDocker('comp4', ip='10.0.0.210', dcmd='python wrapper.py', dimage='awc_js_twd:11-15-22', mem_limit='96m', memswap_limit='288m', cpu_period=100000, cpu_quota=37500, environment={"AWC_SERVER_IPS": "10.0.0.110,10.0.0.111,10.0.0.112,10.0.0.113,10.0.0.114,10.0.0.115,10.0.0.120,10.0.0.121,10.0.0.122,10.0.0.123,10.0.0.124,10.0.0.125", "JS_SERVER_IPS": "", "TWD_SERVER_IPS": ""})
+comp1 = net.addDocker('comp1', ip='10.0.0.220', dcmd='python wrapper.py', dimage='awc_pm:11-15-22', mem_limit='192m', memswap_limit='576m', cpu_period=100000, cpu_quota=75000, environment={"AWC_SERVER_IPS": "", "PM_SERVER_IPS": "10.0.0.134,10.0.0.135,10.0.0.136,10.0.0.137"})
+comp3 = net.addDocker('comp3', ip='10.0.0.221', dcmd='python tool_wear_detection.py', dimage='tool_wear_detection:ver1', mem_limit='96m', memswap_limit='288m', cpu_period=100000, cpu_quota=37500, environment={"TWD_SERVER_IPS": "10.0.0.130,10.0.0.131"})
 dev1 = net.addDocker('dev1', ip='10.0.0.110', dcmd='python cnc.py', dimage='cnc:ver2')
 dev2 = net.addDocker('dev2', ip='10.0.0.111', dcmd='python cnc.py', dimage='cnc:ver2')
 dev3 = net.addDocker('dev3', ip='10.0.0.112', dcmd='python cnc.py', dimage='cnc:ver2')

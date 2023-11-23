@@ -4,7 +4,7 @@ from mininet.net import Containernet
 from mininet.node import Controller
 from mininet.cli import CLI
 from mininet.link import TCLink
-from mininet.log import setLogLevel
+from mininet.log import info ,setLogLevel
 
 setLogLevel("info")
 
@@ -12,9 +12,9 @@ net = Containernet(controller=Controller)
 net.addController("c0")
 
 info('*** Adding docker containers as hosts\n')
-comp2 = net.addDocker('comp2', ip='10.0.0.200', dcmd='python wrapper.py', dimage='js_pm:11-15-22', mem_limit='256m', memswap_limit='768m', cpu_period='100000', cpu_quota='100000', environment={"JS_SERVER_IPS": "10.0.0.110,10.0.0.111,10.0.0.112,10.0.0.113,10.0.0.114,10.0.0.115", "PM_SERVER_IPS": ""})
-comp3 = net.addDocker('comp3', ip='10.0.0.210', dcmd='python tool_wear_detection.py', dimage='tool_wear_detection:ver1', mem_limit='96m', memswap_limit='288m', cpu_period='100000', cpu_quota='37500', environment={"TWD_SERVER_IPS": "10.0.0.114,10.0.0.115,10.0.0.124,10.0.0.125"})
-comp1 = net.addDocker('comp1', ip='10.0.0.220', dcmd='python automatic_workpiece_changing.py', dimage='automatic_workpiece_changing:ver1', mem_limit='192m', memswap_limit='576m', cpu_period='100000', cpu_quota='75000', environment={"AWC_SERVER_IPS": ""})
+comp2 = net.addDocker('comp2', ip='10.0.0.200', dcmd='python wrapper.py', dimage='awc_twd:11-15-22', mem_limit='256m', memswap_limit='768m', cpu_period=100000, cpu_quota=100000, environment={"AWC_SERVER_IPS": "10.0.0.110,10.0.0.111,10.0.0.112,10.0.0.113,10.0.0.114,10.0.0.115", "TWD_SERVER_IPS": ""})
+comp3 = net.addDocker('comp3', ip='10.0.0.210', dcmd='python predictive_maintenance.py', dimage='predictive_maintenance:ver1', mem_limit='96m', memswap_limit='288m', cpu_period=100000, cpu_quota=37500, environment={"PM_SERVER_IPS": "10.0.0.114,10.0.0.115,10.0.0.124,10.0.0.125"})
+comp1 = net.addDocker('comp1', ip='10.0.0.220', dcmd='python job_scheduling.py', dimage='job_scheduling:ver1', mem_limit='192m', memswap_limit='576m', cpu_period=100000, cpu_quota=75000, environment={"JS_SERVER_IPS": ""})
 dev1 = net.addDocker('dev1', ip='10.0.0.110', dcmd='python cnc.py', dimage='cnc:ver2')
 dev2 = net.addDocker('dev2', ip='10.0.0.111', dcmd='python cnc.py', dimage='cnc:ver2')
 dev3 = net.addDocker('dev3', ip='10.0.0.112', dcmd='python cnc.py', dimage='cnc:ver2')
