@@ -150,7 +150,7 @@ def main(file_path):
             continue
         elif len(computer_info['running_apps']) == 1:
             docker_image = application_dict[computer_info['running_apps'][0]]['name'].lower().replace(" ", "_")
-            tag_version = "ver1"
+            tag_version = "ver2"
             
             env_key = ''.join([word[0].upper() for word in docker_image.split("_")]) + "_SERVER_IPS"
             subscription_key = f"{computer_info['running_apps'][0]}_{computer_name}"

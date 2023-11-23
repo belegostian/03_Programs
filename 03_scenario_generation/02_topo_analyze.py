@@ -89,6 +89,8 @@ def main():
             subscription_dict = load_subscriptions(subscription_file)
             updated_subscriptions = shortest_path(graph, subscription_dict)
             write_subscription_paths(updated_subscriptions, output_file)
+            
+            _logger.info(f"{scenario} completed")
         else:
             _logger.warning(f"Graph file not found for scenario {scenario}")
 
