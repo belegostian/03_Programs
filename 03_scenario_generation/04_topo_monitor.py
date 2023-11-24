@@ -59,24 +59,29 @@ def predict_comp_ports(filename):
     return comp_switch_port_pairs
 
 def run_tshark_commands(folder, switch_port_pairs):
+    logging.info(f"Running tshark using {folder}")
+    
+    containernet_script_path = os.path.join(folder, 'containernet_script.py')
+    cmd = f"sudo python3 {containernet_script_path}"
+    logging.info(f"Running command: {cmd}\nWaiting for 60 seconds...")
+    subprocess.Popen(cmd, shell=True)
+    time.sleep(50)    
+    
     for comp, interface in switch_port_pairs.items():
-        containernet_script_path = os.path.join(folder, 'containernet_script.py')
+        logging.info(f"monitoring {comp}")
+        
         pcap_file_path = os.path.join(folder, f"tshark_{comp}.pcap")
+        cmd = f"sudo timeout 30 tshark -i {interface} -w {pcap_file_path}"
+        logging.info(f"Running command: {cmd}")
+        logging.info("Capturing for 30 seconds...")
+        subprocess.run(cmd, shell=True)
+        time.sleep(35)
         
-        
-        # 以下用於Linux
-        cmd1 = f"sudo ptrhon3 {containernet_script_path}"
-        cmd2 = f"sudo timeout 30 tshark -i {interface} -w {pcap_file_path}"
-        logging.info(f"Running command: {cmd2}")
-        subprocess.run(cmd1, shell=True)
-        subprocess.run(cmd2, shell=True)
-        logging.info("Waiting for 30 seconds...")
-        time.sleep(40)
-        
-        cmd3 = f"sudo mn -c"
-        logging.info(f"cleaning up")
-        subprocess.run(cmd3, shell=True)
-        time.sleep(5)
+    cmd = f"sudo mn -c"
+    logging.info(f"Running command: {cmd}")
+    logging.info(f"cleaning up for 15 seconds...")
+    subprocess.run(cmd, shell=True)
+    time.sleep(15)
 
 def main():
     # Setting up basic configuration for logging
