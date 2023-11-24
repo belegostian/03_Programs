@@ -62,7 +62,7 @@ def run_tshark_commands(folder, switch_port_pairs):
     logging.info(f"Running tshark using {folder}")
     
     containernet_script_path = os.path.join(folder, 'containernet_script.py')
-    cmd = f"sudo python3 {containernet_script_path}"
+    cmd = f"gnome-terminal -- sudo python3 {containernet_script_path}"
     logging.info(f"Running command: {cmd}\nWaiting for 60 seconds...")
     subprocess.Popen(cmd, shell=True)
     time.sleep(50)    
@@ -71,6 +71,7 @@ def run_tshark_commands(folder, switch_port_pairs):
         logging.info(f"monitoring {comp}")
         
         pcap_file_path = os.path.join(folder, f"tshark_{comp}.pcap")
+        subprocess.run(f"sudo chmod o+w {folder}", shell=True)
         cmd = f"sudo timeout 30 tshark -i {interface} -w {pcap_file_path}"
         logging.info(f"Running command: {cmd}")
         logging.info("Capturing for 30 seconds...")
