@@ -32,21 +32,31 @@ def extract_link_info(filename):
 def predict_comp_ports(filename):
     links_section = extract_link_info(filename)
     if links_section is None:
-        return
-    
+        return None
+
     link_pattern = r"net\.addLink\((\w+), (\w+), cls=TCLink, .*?\)"
-    switch_port_count = {}
-    results = {}
+    switch_link_count = {}
+    comp_switch_port_pairs = {}
 
     for line in links_section.split('\n'):
         match = re.match(link_pattern, line)
         if match:
-            host, switch = match.groups()
-            if 'comp' in host:
-                switch_port_count[switch] = switch_port_count.get(switch, 1) + 1
-                results[host] = f"{switch}-eth{switch_port_count[switch]}"
-                
-    return results
+            host1, host2 = match.groups()
+
+            # Check and update link counts for switches
+            if 'sw' in host1:
+                switch_link_count[host1] = switch_link_count.get(host1, 0) + 1
+            if 'sw' in host2:
+                switch_link_count[host2] = switch_link_count.get(host2, 0) + 1
+
+            # Assign switch-port pair for comps
+            if 'comp' in host1 or 'comp' in host2:
+                comp = host1 if 'comp' in host1 else host2
+                switch = host2 if 'comp' in host1 else host1
+                port_number = switch_link_count[switch]
+                comp_switch_port_pairs[comp] = f"{switch}-eth{port_number}"
+
+    return comp_switch_port_pairs
 
 def run_tshark_commands(folder, switch_port_pairs):
     for comp, interface in switch_port_pairs.items():
@@ -81,11 +91,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
-    
-    
-    
-
