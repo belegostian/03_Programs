@@ -60,14 +60,23 @@ def predict_comp_ports(filename):
 
 def run_tshark_commands(folder, switch_port_pairs):
     for comp, interface in switch_port_pairs.items():
-        file_path = os.path.join(folder, f"tshark_{comp}.pcap")
+        containernet_script_path = os.path.join(folder, 'containernet_script.py')
+        pcap_file_path = os.path.join(folder, f"tshark_{comp}.pcap")
+        
         
         # 以下用於Linux
-        cmd = f"sudo timeout 30 tshark -i {interface} -w {file_path}"
-        logging.info(f"Running command: {cmd}")
-        subprocess.run(cmd, shell=True)
+        cmd1 = f"sudo ptrhon3 {containernet_script_path}"
+        cmd2 = f"sudo timeout 30 tshark -i {interface} -w {pcap_file_path}"
+        logging.info(f"Running command: {cmd2}")
+        subprocess.run(cmd1, shell=True)
+        subprocess.run(cmd2, shell=True)
         logging.info("Waiting for 30 seconds...")
         time.sleep(40)
+        
+        cmd3 = f"sudo mn -c"
+        logging.info(f"cleaning up")
+        subprocess.run(cmd3, shell=True)
+        time.sleep(5)
 
 def main():
     # Setting up basic configuration for logging
