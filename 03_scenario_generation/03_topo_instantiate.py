@@ -201,16 +201,30 @@ def main(file_path):
 
     # 建立 link
     insert_index = next(i for i, line in enumerate(lines) if "*** Creating links" in line) + 1
+    # switch links
     for edge in network_graph.edges():
         if edge[0] in switch_dict and edge[1] in switch_dict:
             link_line = f"net.addLink({edge[0]}, {edge[1]}, cls=TCLink, use_htb=True)\n"
             lines.insert(insert_index, link_line)
             insert_index += 1
 
+    comp_set = set()
+    for sub in subscription_dict.values():
+        app_value = sub['app']
+        parts = app_value.split('_')
+        for part in parts:
+            if 'comp' in part:
+                comp_set.add(part)
+
+    # switch-host links
     for edge in network_graph.edges():
         switch, host = (edge if edge[0] in switch_dict else reversed(edge))
+        # 兩個都是switch或都不是switch就跳過
         if host in switch_dict or switch not in switch_dict:
-            continue  # Skip if both are switches or neither is a switch
+            continue
+        # 如果是電腦，但沒有連線對象，就跳過
+        if 'comp' in host and host not in comp_set:
+            continue
 
         switch_info = switch_dict[switch]
         delay = switch_info['forward_delay']
