@@ -5,6 +5,12 @@ import random
 import networkx as nx
 import matplotlib.pyplot as plt
 
+#! TOFO
+"""
+    1. 統一路徑
+"""
+
+#? 請在03_Programs資料夾下執行此程式
 
 # 第一章: 輔助型函式
 def read_csv_as_dict(filename, key_column, processing_func=None):
@@ -185,7 +191,7 @@ def add_app_nodes_to_topology(G, application_dict, computer_dict, show_plot=Fals
         font_size=15
     )
     plt.title("Updated Network Topology with Applications")
-    plt.savefig(f"experiment_0/scenario_{iteration}/scenario_{iteration}.png", format='PNG', dpi=300)
+    plt.savefig(f"03_scenario_generation\\experiment_0\\scenario_{iteration}\\network_topo.png", format='PNG', dpi=300)
 
     if show_plot:        
         plt.show()
@@ -195,10 +201,10 @@ def add_app_nodes_to_topology(G, application_dict, computer_dict, show_plot=Fals
 # 第三章: 主函式
 def main(G, iteration):
     # 讀取資料
-    device_dict = read_csv_as_dict('experiment_0\\devices.csv', 'device', process_device_row)
-    application_dict = read_csv_as_dict('experiment_0\\applications.csv', 'application', process_application_row)
-    computer_dict = read_csv_as_dict('experiment_0\\computers.csv', 'computer', process_computer_row)
-    switch_dict = read_csv_as_dict('experiment_0\\switches.csv', 'switch', process_switch_row)
+    device_dict = read_csv_as_dict('03_scenario_generation\\experiment_0\\devices.csv', 'device', process_device_row)
+    application_dict = read_csv_as_dict('03_scenario_generation\\experiment_0\\applications.csv', 'application', process_application_row)
+    computer_dict = read_csv_as_dict('03_scenario_generation\\experiment_0\\computers.csv', 'computer', process_computer_row)
+    switch_dict = read_csv_as_dict('03_scenario_generation\\experiment_0\\switches.csv', 'switch', process_switch_row)
     
     # 生成拓樸
     computer_dict = assign_computer_group(computer_dict, len(switch_dict))
@@ -210,12 +216,12 @@ def main(G, iteration):
     app_to_topo = add_app_nodes_to_topology(computer_to_topo, application_dict, computer_dict, show_plot=False, iteration=iteration)
     
     # 更新 CSV-1
-    update_comp_csv_file = f'experiment_0\\scenario_{iteration}\\computers.csv'
+    update_comp_csv_file = f'03_scenario_generation\\experiment_0\\scenario_{iteration}\\computers.csv'
     headers = ["computer", "cpu", "memory", "bandwidth", "group", "running_apps"]
     write_dict_to_csv(update_comp_csv_file, computer_dict, headers)
     
     # 更新 CSV-2
-    topo_csv_file = f'experiment_0/scenario_{iteration}/scenario_{iteration}.csv'
+    topo_csv_file = f'03_scenario_generation\\experiment_0\\scenario_{iteration}\\network_topo.csv'
     with open(topo_csv_file, 'w', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(['Nodes'])
@@ -225,12 +231,12 @@ def main(G, iteration):
         writer.writerows(app_to_topo.edges)
         
 if __name__ == "__main__":
-    scenario_num = 5
+    scenario_num = 20
     G = nx.Graph()
-    create_directory('experiment_0')
+    create_directory('03_scenario_generation\\experiment_0')
     
     for i in range(scenario_num):
-        create_directory(f'experiment_0/scenario_{i}')
+        create_directory(f'03_scenario_generation\\experiment_0\\scenario_{i}')
         G.clear()
         main(G, i)
         

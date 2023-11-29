@@ -5,6 +5,8 @@ import re
 from collections import defaultdict
 import networkx as nx
 
+#? 請在03_Programs資料夾下執行此程式
+
 _logger = logging.getLogger(__name__)
 
 # 第一章，輔助型函式
@@ -76,12 +78,12 @@ def write_subscription_paths(subscription_dict, file_name):
 
 # 第三章，主程式
 def main():
-    base_folder = 'experiment_0'
+    base_folder = '03_scenario_generation\\experiment_0'
     subscription_file = os.path.join(base_folder, 'subscriptions.csv')
     scenario_folders = [d for d in os.listdir(base_folder) if os.path.isdir(os.path.join(base_folder, d)) and d.startswith('scenario')]
     
     for scenario in scenario_folders:
-        graph_file = os.path.join(base_folder, scenario, f'{scenario}.csv')
+        graph_file = os.path.join(base_folder, scenario, f'network_topo.csv')
         output_file = os.path.join(base_folder, scenario, 'subscription_paths.csv')
         
         if os.path.exists(graph_file):

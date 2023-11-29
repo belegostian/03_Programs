@@ -65,24 +65,24 @@ def run_tshark_commands(folder, switch_port_pairs):
     cmd = f"gnome-terminal -- sudo python3 {containernet_script_path}"
     logging.info(f"Running command: {cmd}\nWaiting for 60 seconds...")
     subprocess.Popen(cmd, shell=True)
-    time.sleep(50)    
+    time.sleep(60)    
     
     for comp, interface in switch_port_pairs.items():
         logging.info(f"monitoring {comp}")
         
         pcap_file_path = os.path.join(folder, f"{comp}.pcap")
         subprocess.run(f"sudo chmod o+w {folder}", shell=True)
-        cmd = f"sudo timeout 30 tshark -i {interface} -w {pcap_file_path}"
+        cmd = f"sudo timeout 300 tshark -i {interface} -w {pcap_file_path}"
         logging.info(f"Running command: {cmd}")
-        logging.info("Capturing for 30 seconds...")
+        logging.info("Capturing for 300 seconds...")
         subprocess.run(cmd, shell=True)
-        time.sleep(35)
+        time.sleep(310)
         
     cmd = f"sudo mn -c"
     logging.info(f"Running command: {cmd}")
-    logging.info(f"cleaning up for 15 seconds...")
+    logging.info(f"cleaning up for 20 seconds...")
     subprocess.run(cmd, shell=True)
-    time.sleep(15)
+    time.sleep(20)
 
 def main():
     # Setting up basic configuration for logging

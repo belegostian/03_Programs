@@ -7,6 +7,8 @@ import networkx as nx
 from collections import defaultdict
 from datetime import datetime
 
+#? 請在03_Programs資料夾下執行此程式
+
 # 第一章，輔助函式
 def csv_to_dict(file_path, key_field, transformations=None, split_fields=None):
     data_dict = {}
@@ -86,7 +88,7 @@ def main(file_path):
         'bandwidth': int,
         'group': int
     }
-    device_dict = csv_to_dict('experiment_0\\devices.csv', 'device', device_transformations)
+    device_dict = csv_to_dict('03_scenario_generation\\experiment_0\\devices.csv', 'device', device_transformations)
 
     computer_transformations = {
         'running_apps': ast.literal_eval,
@@ -105,7 +107,7 @@ def main(file_path):
         'packet_sending (kB)': float,
         'packet_receiving (kB)': float
     }
-    application_dict = csv_to_dict('experiment_0\\applications.csv', 'application', application_transformations)
+    application_dict = csv_to_dict('03_scenario_generation\\experiment_0\\applications.csv', 'application', application_transformations)
 
     subscription_split_fields = {
         'path': ','
@@ -116,12 +118,12 @@ def main(file_path):
         'bandwidth': int,
         'forward_delay': float
     }
-    switch_dict = csv_to_dict('experiment_0\switches.csv', 'switch', switch_transformations)
+    switch_dict = csv_to_dict('03_scenario_generation\\experiment_0\\switches.csv', 'switch', switch_transformations)
 
-    network_graph = create_graph_from_csv('experiment_0\scenario_0\scenario_0.csv')
+    network_graph = create_graph_from_csv(os.path.join(file_path, 'network_topo.csv'))
 
     #腳本撰寫
-    with open('containernet_sample.py', 'r') as file:
+    with open('03_scenario_generation\\containernet_sample.py', 'r') as file:
         lines = file.readlines()
 
     # 建立 device-host
@@ -254,10 +256,10 @@ def main(file_path):
     
 
 if __name__ == "__main__":
-    scenario_num = 5
+    base_folder = '03_scenario_generation\\experiment_0'
+    scenario_folders = [d for d in os.listdir(base_folder) if os.path.isdir(os.path.join(base_folder, d)) and d.startswith('scenario')]
     
-    for i in range(scenario_num):
-        file_path = f'experiment_0\\scenario_{i}'
-        main(file_path)
+    for scenario in scenario_folders:
+        main(os.path.join(base_folder, scenario))
         
-        print(f"Scenario {i} completed.")
+        print(f"{scenario} completed.")
