@@ -70,7 +70,7 @@ def run_tshark_commands(folder, switch_port_pairs):
     for comp, interface in switch_port_pairs.items():
         logging.info(f"monitoring {comp}")
         
-        pcap_file_path = os.path.join(folder, f"tshark_{comp}.pcap")
+        pcap_file_path = os.path.join(folder, f"{comp}.pcap")
         subprocess.run(f"sudo chmod o+w {folder}", shell=True)
         cmd = f"sudo timeout 30 tshark -i {interface} -w {pcap_file_path}"
         logging.info(f"Running command: {cmd}")

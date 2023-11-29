@@ -1,29 +1,33 @@
 import pyshark
+import argparse
 from collections import defaultdict, Counter
 import matplotlib.pyplot as plt
 import numpy as np
 import logging
+import csv
+import sys
+from statistics import mean
+import os
+import pandas as pd
 
-SERVER_IP = '10.0.0.100'                                                # (string): 伺服器/主機IP
-EXPECTED_SESSION_COUNT = 3                                                         # (int): 伺服器/主機同時處理的session數量
-CAPTURE_FILE = 'Traffic_Capture (Mininet)\multi_server_single_client.pcapng'     # (string): 擷取封包檔案路徑
-TIME_INTERVAL = 6                                                     # (int): 數據平均的時間間隔 -秒
+#? 請在03_Programs資料夾下執行此程式
+#? 這支程式在自動化流程中有大改，部分註解可能有錯誤
 
 # PART 1: 依照時間間隔取得封包物件
 def update_time_interval(packet, start_time, end_time):
     """輔助函式, 更新 read_pcapng_file 時間區間
     """
     start_time = packet.sniff_time.timestamp()
-    end_time = start_time + TIME_INTERVAL
+    end_time = start_time + time_interval
     return start_time, end_time
 
-def read_pcapng_file():
+def read_pcapng_file(capture_file):
     """批次取得時間間隔內的封包物件
 
     Yields:
         [packet_object]: 時間間隔內的封包物件
     """
-    with pyshark.FileCapture(CAPTURE_FILE, keep_packets=True) as cap:
+    with pyshark.FileCapture(capture_file, keep_packets=True) as cap:
         packet_list = []
         start_time, end_time = None, None
         
@@ -46,7 +50,7 @@ def read_pcapng_file():
             yield packet_list
 
 # PART 2: 依照 session/訂閱關係 做分類
-def initial_packet_grouping(packet_list):
+def initial_packet_grouping(packet_list, client_ip):
     grouped_packets = {'background': []}
     
     for packet in packet_list:
@@ -59,10 +63,11 @@ def initial_packet_grouping(packet_list):
             grouped_packets['background'].append(packet)
             continue
 
-        if src_ip == SERVER_IP or dst_ip == SERVER_IP:
-            client_ip = dst_ip if src_ip == SERVER_IP else src_ip
-            client_port = dst_port if src_ip == SERVER_IP else src_port
-            group_key = f"{client_ip}-{client_port}"
+        if src_ip == client_ip or dst_ip == client_ip:
+            server_ip = dst_ip if src_ip == client_ip else src_ip
+            server_port = dst_port if src_ip == client_ip else src_port
+            client_port = src_port if src_ip == client_ip else dst_port
+            group_key = f"{client_ip}:{client_port}-{server_ip}:{server_port}"
             
             if group_key not in grouped_packets:
                 grouped_packets[group_key] = []
@@ -93,7 +98,7 @@ def collect_grouped_packets_info(grouped_packets):
         
     return grouped_packets_info
 
-def find_reconnect_sessions(sessions):
+def find_reconnect_sessions(sessions, expected_session_count):
     """輔助函式, 找到可能是斷線重聯的兩段session, 將其記錄下來
 
     Args:
@@ -117,13 +122,16 @@ def find_reconnect_sessions(sessions):
         for j, (session2, data2) in enumerate(sorted_sessions[i+1:]):
             if session2 not in sessions:
                 continue
-
-            if data2['First Packet Order'] > data1['Last Packet Order'] and data2['SYN Flag']: # 代表 data2 順序上是在 data1 之後，且是新的正常session
-                gap = data2['First Packet Order'] - data1['Last Packet Order']
-                
-                if gap < min_gap:
-                    min_gap = gap
-                    reconnect_candidate = session2
+            
+            session1_ip = '-'.join([part.split(':')[0] for part in session1.split('-')])
+            session2_ip = '-'.join([part.split(':')[0] for part in session2.split('-')])
+            if session1_ip == session2_ip: # 代表是同一對IP
+                if data2['First Packet Order'] > data1['Last Packet Order'] and data2['SYN Flag']: # 代表 data2 順序上是在 data1 之後，且是新的正常session
+                    gap = data2['First Packet Order'] - data1['Last Packet Order']
+                    
+                    if gap < min_gap:
+                        min_gap = gap
+                        reconnect_candidate = session2
 
         if reconnect_candidate:
             reconnect_pairs[session1] = reconnect_candidate
@@ -132,7 +140,7 @@ def find_reconnect_sessions(sessions):
             
             total_session_count -= 1 # 更新剩餘session數量
 
-        if total_session_count == EXPECTED_SESSION_COUNT: # 若剩餘session數量已符合預期，則不需要再繼續搜尋
+        if total_session_count == expected_session_count: # 若剩餘session數量已符合預期，則不需要再繼續搜尋
             break
 
     return reconnect_pairs
@@ -151,12 +159,12 @@ def handle_reconnect_sessions(initial_packet_groups, reconnect_pairs):
             initial_packet_groups[new_key] = initial_packet_groups.pop(old_key) # 重新命名以保留新的session名稱
 
 # PART 2-1: 依照分類結果追蹤sessions
-def sort_sessions_by_length(initial_packet_groups, exclude_keywords):
+def sort_sessions_by_length(initial_packet_groups, exclude_keywords, expected_session_count):
     return sorted(
         [k for k in initial_packet_groups.keys() if all(ex not in k for ex in exclude_keywords)],
         key=lambda k: len(initial_packet_groups[k]),
         reverse=True
-    )[:EXPECTED_SESSION_COUNT]
+    )[:expected_session_count]
 
 def initialize_session_tracking(packet_groups, session_track, sorted_group_keys, session_key_history):
     for i, session_name in enumerate(session_track.keys()):
@@ -207,7 +215,7 @@ def update_session_tracking(initial_packet_groups, session_track, reconnect_pair
                 except StopIteration:
                     pass       
 
-def session_tracking(initial_packet_groups, session_track, reconnect_pairs, session_key_history):
+def session_tracking(initial_packet_groups, session_track, reconnect_pairs, session_key_history, expected_session_count):
     """更新各session的狀態
 
     Args:
@@ -219,18 +227,18 @@ def session_tracking(initial_packet_groups, session_track, reconnect_pairs, sess
         _type_: _description_
     """
     if all(val == 'NONE' for val in session_track.values()): # 首次執行
-        sorted_group_keys = sort_sessions_by_length(initial_packet_groups, 'background')
+        sorted_group_keys = sort_sessions_by_length(initial_packet_groups, 'background', expected_session_count)
         initialize_session_tracking(initial_packet_groups, session_track, sorted_group_keys, session_key_history)
         
         return initial_packet_groups
         
     else: # 非首次執行，確認session是否有變動
-        sorted_group_keys = sort_sessions_by_length(initial_packet_groups, ['background', 'Session'])
+        sorted_group_keys = sort_sessions_by_length(initial_packet_groups, ['background', 'Session'], expected_session_count)
         update_session_tracking(initial_packet_groups, session_track, reconnect_pairs, sorted_group_keys, session_key_history)
         
         return initial_packet_groups
 
-def classify_packets(packet_list, session_track, session_key_history):
+def classify_packets(packet_list, client_ip, expected_session_count, session_track, session_key_history):
     """將封包分類成不同的session
 
     Args:
@@ -240,20 +248,20 @@ def classify_packets(packet_list, session_track, session_key_history):
     Returns:
         _type_: _description_
     """
-    initial_packet_groups = initial_packet_grouping(packet_list)
+    initial_packet_groups = initial_packet_grouping(packet_list, client_ip)
     grouped_packets_info = collect_grouped_packets_info(initial_packet_groups)
     reconnect_pairs = {}
     
-    if len(grouped_packets_info) > EXPECTED_SESSION_COUNT: # 有多餘的session，可能是異常，也可能是reconnect
-        reconnect_pairs = find_reconnect_sessions(grouped_packets_info)
+    if len(grouped_packets_info) > expected_session_count: # 有多餘的session，可能是異常，也可能是reconnect
+        reconnect_pairs = find_reconnect_sessions(grouped_packets_info, expected_session_count)
         handle_reconnect_sessions(initial_packet_groups, reconnect_pairs)
     
-    sessions = session_tracking(initial_packet_groups, session_track, reconnect_pairs, session_key_history)
+    sessions = session_tracking(initial_packet_groups, session_track, reconnect_pairs, session_key_history, expected_session_count)
     
     return sessions
 
 # PART 3: 計算通訊指標
-def unilateral_metrics(packet_list):
+def unilateral_metrics(packet_list, client_ip):
     """計算單向通訊指標: 平均單包吞吐量、平均總吞吐量、平均發送頻率
 
     Args:
@@ -269,9 +277,9 @@ def unilateral_metrics(packet_list):
         src_ip = packet.ip.src
         dst_ip = packet.ip.dst
 
-        if src_ip == SERVER_IP:
+        if src_ip == client_ip:
             response_group.append(packet)
-        elif dst_ip == SERVER_IP:
+        elif dst_ip == client_ip:
             request_group.append(packet)
             
     def calculate(group):
@@ -279,8 +287,8 @@ def unilateral_metrics(packet_list):
         total_packets = len(group)
         
         avg_load = 0 if total_packets == 0 else round(total_bytes / total_packets, 2)
-        avg_throughput = total_bytes / TIME_INTERVAL if TIME_INTERVAL else 0
-        avg_frequency = total_packets / TIME_INTERVAL if TIME_INTERVAL else 0
+        avg_throughput = total_bytes / time_interval if time_interval else 0
+        avg_frequency = total_packets / time_interval if time_interval else 0
         
         return avg_load, avg_throughput, avg_frequency
     
@@ -306,7 +314,7 @@ def get_tcp_flags(flag_hex):
 
     return flag_dict
 
-def bilateral_metrics(packet_list, sub_key):
+def bilateral_metrics(packet_list, client_ip):
     """_summary_
 
     Args:
@@ -320,7 +328,7 @@ def bilateral_metrics(packet_list, sub_key):
     rtt_list = []
     req_resp_delay_list = []
     track_packets = {}
-    session_indexes = {'max_req_seq': 0, 'max_resp_seq': 0, 'client_port': sub_key, 'opc_req_handle': None, 'holding_SYN_flag': False}
+    session_indexes = {'max_req_seq': 0, 'max_resp_seq': 0, 'client_port': None, 'opc_req_handle': None, 'holding_SYN_flag': False}
     h_messages = []
     e_messages = []
     
@@ -329,8 +337,18 @@ def bilateral_metrics(packet_list, sub_key):
         # 基本封包資訊
         order = packet.number
         timestamp = float(packet.sniff_timestamp)
+        
+        src_ip = packet.ip.src
+        dst_ip = packet.ip.dst
+        src_port = packet[packet.transport_layer].srcport
+        dst_port = packet[packet.transport_layer].dstport
+        
+        server_ip = dst_ip if src_ip == client_ip else src_ip
+        server_port = dst_port if src_ip == client_ip else src_port
+        client_port = src_port if src_ip == client_ip else dst_port            
+        
         ip = packet.ip.src
-        client_port = packet[packet.transport_layer].dstport if ip == SERVER_IP else packet[packet.transport_layer].srcport
+        client_port = packet[packet.transport_layer].srcport if ip == client_ip else packet[packet.transport_layer].dstport
         flags = get_tcp_flags(packet.tcp.flags)
         seq = int(packet.tcp.seq)
         ack = int(packet.tcp.ack)
@@ -371,10 +389,10 @@ def bilateral_metrics(packet_list, sub_key):
             e_messages.pop() # 將上次加入的異常封包移除
             session_indexes['holding_SYN_flag'] = False
         
-        if ip == SERVER_IP and seq <= session_indexes['max_resp_seq']: # 多種原因，高機率是某種retransmission
+        if ip == server_ip and seq <= session_indexes['max_resp_seq']: # 多種原因，高機率是某種retransmission
             e_messages.append(order)
             continue
-        elif ip != SERVER_IP and seq <= session_indexes['max_req_seq']:
+        elif ip != server_ip and seq <= session_indexes['max_req_seq']:
             e_messages.append(order)
             continue
         
@@ -392,7 +410,7 @@ def bilateral_metrics(packet_list, sub_key):
                 track_packets[seq + tcp_segment_len] = {'timestamp': timestamp, 'seq': seq, 'ack': ack, 'opc_req_handle': opc_req_handle} # 下一個對應的回應封包其ack值會相等此次封包req+tcp_segment_len
         
         # 更新session_indexes
-        if ip == SERVER_IP: # 這是封回應封包
+        if ip == server_ip: # 這是封回應封包
             session_indexes['max_resp_seq'] = seq
         else:
             session_indexes['max_req_seq'] = seq
@@ -405,6 +423,41 @@ def bilateral_metrics(packet_list, sub_key):
     b_metrics = {'avg_rtt': avg_rtt, 'avd_req_resp_delay': avd_req_resp_delay, 'h_messages': h_messages, 'e_messages': e_messages}
     
     return b_metrics
+
+def process_and_save_data(average_rtt, average_req_resp_delay, reconnection_count, error_packets_count, output_file):
+    # Helper function to calculate the average of a list
+    def process_data(data_dict):
+        processed_data = defaultdict(float)
+        for outer_key, inner_dict in data_dict.items():
+            if "Session" in outer_key:
+                total = sum(inner_dict.values())
+                count = len(inner_dict)
+                processed_data[outer_key] = total / count if count > 0 else 0
+        return processed_data
+
+    # Process the defaultdict structures
+    processed_average_rtt = process_data(average_rtt)
+    processed_average_req_resp_delay = process_data(average_req_resp_delay)
+    processed_reconnection_count = process_data(reconnection_count)
+    processed_error_packets_count = process_data(error_packets_count)
+    
+    with open(output_file, mode='r', newline='') as file:
+        reader = csv.reader(file)
+        existing_headers = next(reader, None)
+
+    # Write processed data to CSV
+    with open(output_file, mode='a', newline='') as file:
+        writer = csv.DictWriter(file, fieldnames=existing_headers)
+        
+        # Append each session's data
+        for session in processed_average_rtt.keys():
+            writer.writerow({
+                'Session': session,
+                'Average RTT': round(processed_average_rtt[session], 4),
+                'Average Req Resp Delay': round(processed_average_req_resp_delay[session], 4),
+                'Average Reconnection Count': round(processed_reconnection_count[session], 4),
+                'Average Error Packets Count': round(processed_error_packets_count[session], 4)
+            })
 
 def plot_metrics(plot_data, title, unit):
     plt.figure()
@@ -440,33 +493,33 @@ def plot_metrics(plot_data, title, unit):
     plt.show()
 
 # 主程式
-def main():
+def main(client_ip, expected_session_count, capture_file, output_file, time_interval):
     
     capture_duration = 0 # 擷取封包的時間長度
-    session_track ={f'Session {i+1}': 'NONE' for i in range(EXPECTED_SESSION_COUNT)}
+    session_track ={f'Session {i+1}': 'NONE' for i in range(expected_session_count)}
     session_key_history = {}
     
     u_metrics_dict = defaultdict(lambda: defaultdict(lambda: defaultdict(dict))) # 單向通訊指標
     b_metrics_dict = defaultdict(lambda: defaultdict(lambda: defaultdict(dict))) # 雙向通訊指標
     
-    request_data_load = defaultdict(lambda: defaultdict(list))
-    request_data_throughput = defaultdict(lambda: defaultdict(list))
-    request_data_frequency = defaultdict(lambda: defaultdict(list))
+    request_data_load = defaultdict(lambda: defaultdict(float))
+    request_data_throughput = defaultdict(lambda: defaultdict(float))
+    request_data_frequency = defaultdict(lambda: defaultdict(float))
     
-    response_data_load = defaultdict(lambda: defaultdict(list))
-    response_data_throughput = defaultdict(lambda: defaultdict(list))
-    response_data_frequency = defaultdict(lambda: defaultdict(list))
+    response_data_load = defaultdict(lambda: defaultdict(float))
+    response_data_throughput = defaultdict(lambda: defaultdict(float))
+    response_data_frequency = defaultdict(lambda: defaultdict(float))
     
-    average_rtt = defaultdict(lambda: defaultdict(list))
-    average_req_resp_delay = defaultdict(lambda: defaultdict(list))
-    reconnection_count = defaultdict(lambda: defaultdict(list))
-    error_packets_count = defaultdict(lambda: defaultdict(list))
+    average_rtt = defaultdict(lambda: defaultdict(float))
+    average_req_resp_delay = defaultdict(lambda: defaultdict(float))
+    reconnection_count = defaultdict(lambda: defaultdict(float))
+    error_packets_count = defaultdict(lambda: defaultdict(float))
     
     # 批次讀取封包
-    packet_lists = read_pcapng_file()
+    packet_lists = read_pcapng_file(capture_file)
     for packet_list in packet_lists:
         
-        capture_duration += TIME_INTERVAL
+        capture_duration += time_interval
         logging.info('')
         logging.info(f'Processed Time Interval: {capture_duration} seconds')
         
@@ -478,7 +531,7 @@ def main():
         # logging.info('---')
         
         # 分類封包
-        classified_packets = classify_packets(packet_list, session_track, session_key_history)
+        classified_packets = classify_packets(packet_list, client_ip, expected_session_count, session_track, session_key_history)
         
         # 分類封包 -測試        
         # for key, value in classified_packets.items():
@@ -491,11 +544,11 @@ def main():
         
         # 計算通訊指標
         for key, value in classified_packets.items(): # key為client_ip-client_port, value為[packet1, packet2, ...]
-            if key == 'background':
+            if 'Session' not in key:
                 continue
             
-            u_metrics = unilateral_metrics(value)
-            b_metrics = bilateral_metrics(value, key.split('-')[1])
+            u_metrics = unilateral_metrics(value, client_ip)
+            b_metrics = bilateral_metrics(value, (key.split(': ')[1]).split(':')[0])
             
             # 計算單向通訊指標 -測試
             # logging.info(f'Client IP: {key.split('-')[0]}, Client Port: {key.split('-')[1]}')
@@ -508,38 +561,64 @@ def main():
             # logging.info(f'RTT: {b_metrics["avg_rtt"]}, Request-Response Delay: {b_metrics["avd_req_resp_delay"]}, Reconnection_count: {len(b_metrics["h_messages"])}, Error_count: {len(b_metrics["e_messages"])}')
             # logging.info('---')
             
+            # 處理key以合併session
+            session_part, ip_part = key.split(': ', 1)
+            parts = ip_part.split('-')
+            ip_addresses = [part.split(':')[0] for part in parts]
+            key = session_part + ': ' + '-'.join(ip_addresses)
+            
             u_metrics_dict[capture_duration][key] = u_metrics
             b_metrics_dict[capture_duration][key] = b_metrics
             
-            request_data_load[key][capture_duration].append(u_metrics['request']['avg_load'])   
-            request_data_throughput[key][capture_duration].append(u_metrics['request']['avg_throughput'])
-            request_data_frequency[key][capture_duration].append(u_metrics['request']['avg_frequency'])
+            request_data_load[key][capture_duration] = u_metrics['request']['avg_load']
+            request_data_throughput[key][capture_duration]= u_metrics['request']['avg_throughput']
+            request_data_frequency[key][capture_duration]= u_metrics['request']['avg_frequency']
                     
-            response_data_load[key][capture_duration].append(u_metrics['response']['avg_load'])
-            response_data_throughput[key][capture_duration].append(u_metrics['response']['avg_throughput'])
-            response_data_frequency[key][capture_duration].append(u_metrics['response']['avg_frequency'])
+            response_data_load[key][capture_duration] = u_metrics['response']['avg_load']
+            response_data_throughput[key][capture_duration] = u_metrics['response']['avg_throughput']
+            response_data_frequency[key][capture_duration] = u_metrics['response']['avg_frequency']
                     
-            average_rtt[key][capture_duration].append(b_metrics['avg_rtt'])
-            average_req_resp_delay[key][capture_duration].append(b_metrics['avd_req_resp_delay'])
-            reconnection_count[key][capture_duration].append(len(b_metrics['h_messages']))
-            error_packets_count[key][capture_duration].append(len(b_metrics['e_messages']))   
-            
-    plot_metrics(request_data_load, 'Request Average Load', 'bytes/s')
-    plot_metrics(request_data_throughput, 'Request Average Throughput', 'bytes/s')
-    plot_metrics(request_data_frequency, 'Request Average Frequency', 'packets/s')
+            average_rtt[key][capture_duration] = b_metrics['avg_rtt']
+            average_req_resp_delay[key][capture_duration] = b_metrics['avd_req_resp_delay']
+            reconnection_count[key][capture_duration] = len(b_metrics['h_messages'])
+            error_packets_count[key][capture_duration] = len(b_metrics['e_messages'])
+        
+    # 繪製圖表        
+    # plot_metrics(request_data_load, 'Request Average Load', 'bytes/s')
+    # plot_metrics(request_data_throughput, 'Request Average Throughput', 'bytes/s')
+    # plot_metrics(request_data_frequency, 'Request Average Frequency', 'packets/s')
     
-    plot_metrics(response_data_load, 'Response Average Load', 'bytes/s')
-    plot_metrics(response_data_throughput, 'Response Average Throughput', 'bytes/s')
-    plot_metrics(response_data_frequency, 'Response Average Frequency', 'packets/s')
+    # plot_metrics(response_data_load, 'Response Average Load', 'bytes/s')
+    # plot_metrics(response_data_throughput, 'Response Average Throughput', 'bytes/s')
+    # plot_metrics(response_data_frequency, 'Response Average Frequency', 'packets/s')
     
-    plot_metrics(average_rtt, 'Average RTT', 'ms')
-    plot_metrics(average_req_resp_delay, 'Average Request-Response Delay', 'ms')
-    plot_metrics(reconnection_count, 'Reconnection Count', 'packets')
-    plot_metrics(error_packets_count, 'Error Packets Count', 'packets')
+    # plot_metrics(average_rtt, 'Average RTT', 'ms')
+    # plot_metrics(average_req_resp_delay, 'Average Request-Response Delay', 'ms')
+    # plot_metrics(reconnection_count, 'Reconnection Count', 'packets')
+    # plot_metrics(error_packets_count, 'Error Packets Count', 'packets')
+    
+    process_and_save_data(average_rtt, average_req_resp_delay, reconnection_count, error_packets_count, output_file)
     
 if __name__ == "__main__":
-    
     # 方便觀察程式回饋
-    logging.basicConfig(level=logging.INFO)    
-    main() 
-    pause = input("Press any key to exit...")
+    logging.basicConfig(level=logging.INFO)
+    
+    # 測試組
+    # client_ips = '10.0.0.220,10.0.0.200,10.0.0.211'.split(',')
+    # expected_session_counts = '14,14,8'.split(',')
+    # capture_files = 'scenario_0\\tshark_comp1.pcap,scenario_0\\tshark_comp2.pcap,scenario_0\\tshark_comp4.pcap'.split(',')
+    # output_file = 'data_training.csv'
+    # time_interval = 10
+    
+    # for client_ip, expected_session_count, capture_file in zip(client_ips, expected_session_counts, capture_files):
+    #     main(client_ip, int(expected_session_count), capture_file, output_file, time_interval)
+    
+    client_ip = sys.argv[1]  # 伺服器/主機IP
+    expected_session_count = sys.argv[2] # 伺服器/主機同時處理的session數量
+    capture_file = sys.argv[3] # 擷取封包檔案路徑
+    output_file = sys.argv[4] # 輸出csv檔案路徑
+    time_interval = int(sys.argv[5]) # 數據平均的時間間隔 -秒
+    
+    main(client_ip, int(expected_session_count), capture_file, output_file, time_interval)
+        
+    
