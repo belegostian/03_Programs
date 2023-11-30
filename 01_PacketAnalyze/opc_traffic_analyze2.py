@@ -424,6 +424,70 @@ def bilateral_metrics(packet_list, client_ip):
     
     return b_metrics
 
+def transform_keys(original_dict):
+    new_dict = {}
+    
+    for key in original_dict:
+        
+        if 'Session' not in key:
+                continue
+        
+        session_part, ip_part = key.split(': ', 1)
+        parts = ip_part.split('-')
+        ip_addresses = [part.split(':')[0] for part in parts]
+        new_key = session_part + ': ' + '-'.join(ip_addresses)
+        new_dict[new_key] = original_dict[key]
+        
+    return new_dict
+
+def align_sessions(old_dict, new_dict):
+    record = {k.split(': ')[1]: k.split(': ')[0] for k in old_dict.keys()}
+    aligned_dict = {}
+    
+    for new_key, value in new_dict.items():
+        session, ip_pair = new_key.split(': ')
+        if ip_pair in record:
+            aligned_key = f"{record[ip_pair]}: {ip_pair}"
+            del record[ip_pair]
+        else:
+            aligned_key = new_key
+        aligned_dict[aligned_key] = value
+        
+    return aligned_dict
+
+def plot_metrics(plot_data, title, unit):
+    plt.figure()
+    
+    cool_colors = ['blue', 'turquoise', 'teal', 'cyan', 'royalblue', 'dodgerblue', 'mediumslateblue', 'darkcyan']
+    session_color_map = {}  # A dictionary to map session numbers to colors
+    color_idx = 0
+    
+    # Sort the group names
+    sorted_groups = sorted(plot_data.keys())
+    
+    for group in sorted_groups:
+        duration_data = plot_data[group]
+        x = list(duration_data.keys())
+        y = [sum(values) / len(values) for values in duration_data.values()]  # Average if multiple values
+        
+        if "Session" in group:
+            session_number = group.split(" ")[1]  # Extract session number
+            
+            # Assign a color if not already assigned
+            if session_number not in session_color_map:
+                session_color_map[session_number] = cool_colors[color_idx]
+                color_idx = (color_idx + 1) % len(cool_colors)  # Loop back to the first color if needed
+            
+            plt.plot(x, y, label=group, linewidth=1.5, linestyle='-', marker='o', color=session_color_map[session_number])
+        else:
+            plt.plot(x, y, label=group, linewidth=1, linestyle='--', color='gray')
+    
+    plt.title(title)
+    plt.xlabel('Capture Duration')
+    plt.ylabel(unit)
+    plt.legend()
+    plt.show()
+
 def process_and_save_data(average_rtt, average_req_resp_delay, reconnection_count, error_packets_count, output_file):
     # Helper function to calculate the average of a list
     def process_data(data_dict):
@@ -459,38 +523,6 @@ def process_and_save_data(average_rtt, average_req_resp_delay, reconnection_coun
                 'Average Error Packets Count': round(processed_error_packets_count[session], 4)
             })
 
-def plot_metrics(plot_data, title, unit):
-    plt.figure()
-    
-    cool_colors = ['blue', 'turquoise', 'teal', 'cyan', 'royalblue', 'dodgerblue', 'mediumslateblue', 'darkcyan']
-    session_color_map = {}  # A dictionary to map session numbers to colors
-    color_idx = 0
-    
-    # Sort the group names
-    sorted_groups = sorted(plot_data.keys())
-    
-    for group in sorted_groups:
-        duration_data = plot_data[group]
-        x = list(duration_data.keys())
-        y = [sum(values) / len(values) for values in duration_data.values()]  # Average if multiple values
-        
-        if "Session" in group:
-            session_number = group.split(" ")[1]  # Extract session number
-            
-            # Assign a color if not already assigned
-            if session_number not in session_color_map:
-                session_color_map[session_number] = cool_colors[color_idx]
-                color_idx = (color_idx + 1) % len(cool_colors)  # Loop back to the first color if needed
-            
-            plt.plot(x, y, label=group, linewidth=1.5, linestyle='-', marker='o', color=session_color_map[session_number])
-        else:
-            plt.plot(x, y, label=group, linewidth=1, linestyle='--', color='gray')
-    
-    plt.title(title)
-    plt.xlabel('Capture Duration')
-    plt.ylabel(unit)
-    plt.legend()
-    plt.show()
 
 # 主程式
 def main(client_ip, expected_session_count, capture_file, output_file, time_interval):
@@ -517,10 +549,9 @@ def main(client_ip, expected_session_count, capture_file, output_file, time_inte
     
     # 批次讀取封包
     packet_lists = read_pcapng_file(capture_file)
+    history_classified_packets = {}
     for packet_list in packet_lists:
         
-        capture_duration += time_interval
-        logging.info('')
         logging.info(f'Processed Time Interval: {capture_duration} seconds')
         
         # 讀取封包 -測試
@@ -532,6 +563,9 @@ def main(client_ip, expected_session_count, capture_file, output_file, time_inte
         
         # 分類封包
         classified_packets = classify_packets(packet_list, client_ip, expected_session_count, session_track, session_key_history)
+        classified_packets = transform_keys(classified_packets)
+        classified_packets = align_sessions(history_classified_packets, classified_packets)
+        history_classified_packets = classified_packets
         
         # 分類封包 -測試        
         # for key, value in classified_packets.items():
@@ -544,8 +578,6 @@ def main(client_ip, expected_session_count, capture_file, output_file, time_inte
         
         # 計算通訊指標
         for key, value in classified_packets.items(): # key為client_ip-client_port, value為[packet1, packet2, ...]
-            if 'Session' not in key:
-                continue
             
             u_metrics = unilateral_metrics(value, client_ip)
             b_metrics = bilateral_metrics(value, (key.split(': ')[1]).split(':')[0])
@@ -560,12 +592,6 @@ def main(client_ip, expected_session_count, capture_file, output_file, time_inte
             # logging.info(f'Client IP: {key.split('-')[0]}, Client Port: {key.split('-')[1]}')
             # logging.info(f'RTT: {b_metrics["avg_rtt"]}, Request-Response Delay: {b_metrics["avd_req_resp_delay"]}, Reconnection_count: {len(b_metrics["h_messages"])}, Error_count: {len(b_metrics["e_messages"])}')
             # logging.info('---')
-            
-            # 處理key以合併session
-            session_part, ip_part = key.split(': ', 1)
-            parts = ip_part.split('-')
-            ip_addresses = [part.split(':')[0] for part in parts]
-            key = session_part + ': ' + '-'.join(ip_addresses)
             
             u_metrics_dict[capture_duration][key] = u_metrics
             b_metrics_dict[capture_duration][key] = b_metrics
@@ -582,6 +608,9 @@ def main(client_ip, expected_session_count, capture_file, output_file, time_inte
             average_req_resp_delay[key][capture_duration] = b_metrics['avd_req_resp_delay']
             reconnection_count[key][capture_duration] = len(b_metrics['h_messages'])
             error_packets_count[key][capture_duration] = len(b_metrics['e_messages'])
+        
+        capture_duration += time_interval
+        logging.info('')
         
     # 繪製圖表        
     # plot_metrics(request_data_load, 'Request Average Load', 'bytes/s')
@@ -604,21 +633,21 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     
     # 測試組
-    # client_ips = '10.0.0.220,10.0.0.200,10.0.0.211'.split(',')
-    # expected_session_counts = '14,14,8'.split(',')
-    # capture_files = 'scenario_0\\tshark_comp1.pcap,scenario_0\\tshark_comp2.pcap,scenario_0\\tshark_comp4.pcap'.split(',')
-    # output_file = 'data_training.csv'
-    # time_interval = 10
+    client_ips = '10.0.0.230,10.0.0.200,10.0.0.220,10.0.0.210'.split(',')
+    expected_session_counts = '10,4,2,20'.split(',')
+    capture_files = '03_scenario_generation\\experiment_0\\scenario_0\\comp1.pcap,03_scenario_generation\\experiment_0\\scenario_0\\comp2.pcap,03_scenario_generation\\experiment_0\\scenario_0\\comp3.pcap,03_scenario_generation\\experiment_0\\scenario_0\\comp4.pcap'.split(',')
+    output_file = '01_PacketAnalyze\\data_training.csv'
+    time_interval = 10
     
-    # for client_ip, expected_session_count, capture_file in zip(client_ips, expected_session_counts, capture_files):
-    #     main(client_ip, int(expected_session_count), capture_file, output_file, time_interval)
+    for client_ip, expected_session_count, capture_file in zip(client_ips, expected_session_counts, capture_files):
+        main(client_ip, int(expected_session_count), capture_file, output_file, time_interval)
     
-    client_ip = sys.argv[1]  # 伺服器/主機IP
-    expected_session_count = sys.argv[2] # 伺服器/主機同時處理的session數量
-    capture_file = sys.argv[3] # 擷取封包檔案路徑
-    output_file = sys.argv[4] # 輸出csv檔案路徑
-    time_interval = int(sys.argv[5]) # 數據平均的時間間隔 -秒
+    # client_ip = sys.argv[1]  # 伺服器/主機IP
+    # expected_session_count = sys.argv[2] # 伺服器/主機同時處理的session數量
+    # capture_file = sys.argv[3] # 擷取封包檔案路徑
+    # output_file = sys.argv[4] # 輸出csv檔案路徑
+    # time_interval = int(sys.argv[5]) # 數據平均的時間間隔 -秒
     
-    main(client_ip, int(expected_session_count), capture_file, output_file, time_interval)
+    # main(client_ip, int(expected_session_count), capture_file, output_file, time_interval)
         
     
