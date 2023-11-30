@@ -116,6 +116,8 @@ def process_scenario(folder, result_dicts, time_interval, output_file, start_ind
             else:
                 # 待補
                 pass
+            
+    return start_index
 
 # 第三部分: 對應填寫剩下的另一半訓練資料
 def find_device_and_app(context_adding_containers, device_ip, env_vars, comp):
@@ -172,18 +174,19 @@ def update_data_training(output_file, scenario, comp, app, device, subscription_
     return start_index
 
 def main(base_path, time_interval, output_file):
-    start_index=0
     
     scenario_folders = glob.glob(os.path.join(base_path, f'*scenario*'))
     all_results = {Path(folder).name: process_scenario_folder(folder) for folder in scenario_folders}
 
+    start_index=0
     for folder in scenario_folders:
-        process_scenario(folder, all_results, time_interval, output_file, start_index)
+        start_index = process_scenario(folder, all_results, time_interval, output_file, start_index)
 
 if __name__ == "__main__":
     base_path = '03_scenario_generation\\experiment_0'
     time_interval = '10'
     output_file = '01_PacketAnalyze\\data_training.csv'
+    
     main(base_path, time_interval, output_file)
 
 # Parameters for the training data that will be calculated:
