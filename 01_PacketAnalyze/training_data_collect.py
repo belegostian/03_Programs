@@ -7,22 +7,6 @@ from pathlib import Path
 import pandas as pd
 import time
 
-
-
-# Parameters for the script
-client_ip = []
-expected_session_count = []
-capture_file = ''
-output_file = '01_PacketAnalyze\\data_training.csv'
-time_interval = 10  # in seconds
-
-# Parameters for the training data
-scenario = ''
-computer = []
-application = []
-device = []
-subscription_order = []
-
 # Precompiled Regular Expressions
 comp_pattern = re.compile(r'comp\d+')
 env_var_pattern = re.compile(r'"([^"]+)":\s*"([^"]+)"')
@@ -88,10 +72,9 @@ def write_headers(csv_file_path):
         if csvfile.tell() == 0:  # File is empty, write headers
             writer.writerow(headers)
 
-def process_scenario(folder, result_dicts, time_interval, output_file):
+def process_scenario(folder, result_dicts, time_interval, output_file, start_index):
     subscription_file_path = Path(folder) / 'subscription_paths.csv'
     write_headers(output_file)
-    start_index = 0
 
     container_file = Path(folder) / 'containernet_script.py'
     if container_file.exists():
@@ -141,7 +124,7 @@ def find_device_and_app(context_adding_containers, device_ip, env_vars, comp):
     device = re.search(r"dev(\d+)", device_line).group() if device_line else None
     
     # Find the application
-    app = next((comp for comp, ips in env_vars.items() if device_ip in ips.split(',')), None)
+    app = next((app for app, ips in env_vars.items() if device_ip in ips.split(',')), None)
 
     # Remove the device IP from the corresponding application in env_vars
     if app and device_ip in env_vars.get(app, ''):
@@ -189,11 +172,13 @@ def update_data_training(output_file, scenario, comp, app, device, subscription_
     return start_index
 
 def main(base_path, time_interval, output_file):
+    start_index=0
+    
     scenario_folders = glob.glob(os.path.join(base_path, f'*scenario*'))
     all_results = {Path(folder).name: process_scenario_folder(folder) for folder in scenario_folders}
 
     for folder in scenario_folders:
-        process_scenario(folder, all_results, time_interval, output_file)
+        process_scenario(folder, all_results, time_interval, output_file, start_index)
 
 if __name__ == "__main__":
     base_path = '03_scenario_generation\\experiment_0'
