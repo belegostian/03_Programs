@@ -1,17 +1,11 @@
-import pyshark
-import argparse
-from collections import defaultdict, Counter
-import matplotlib.pyplot as plt
-import numpy as np
-import logging
 import csv
-import sys
-from statistics import mean
-import os
-import pandas as pd
+import logging
+import pyshark
+import matplotlib.pyplot as plt
+from collections import defaultdict
 
 #? 請在03_Programs資料夾下執行此程式
-#? 這支程式在自動化流程中有大改，部分註解可能有錯誤
+#? 這支程式在自動化流程中有大改，部分註解與測試集可能有錯誤
 
 # PART 1: 依照時間間隔取得封包物件
 def update_time_interval(packet, start_time, end_time):
@@ -49,7 +43,7 @@ def read_pcapng_file(capture_file):
         if packet_list:
             yield packet_list
 
-# PART 2: 依照 session/訂閱關係 做分類
+# PART 2-1: 進行分類前置(蒐集、整理、重組)
 def initial_packet_grouping(packet_list, client_ip):
     grouped_packets = {'background': []}
     
@@ -158,7 +152,7 @@ def handle_reconnect_sessions(initial_packet_groups, reconnect_pairs):
             del initial_packet_groups[new_key]
             initial_packet_groups[new_key] = initial_packet_groups.pop(old_key) # 重新命名以保留新的session名稱
 
-# PART 2-1: 依照分類結果追蹤sessions
+# PART 2-2: 依照分類結果追蹤sessions
 def sort_sessions_by_length(initial_packet_groups, exclude_keywords, expected_session_count):
     return sorted(
         [k for k in initial_packet_groups.keys() if all(ex not in k for ex in exclude_keywords)],
@@ -238,6 +232,7 @@ def session_tracking(initial_packet_groups, session_track, reconnect_pairs, sess
         
         return initial_packet_groups
 
+# PART 2: 依照 session/訂閱關係 做分類
 def classify_packets(packet_list, client_ip, expected_session_count, session_track, session_key_history):
     """將封包分類成不同的session
 
@@ -424,6 +419,7 @@ def bilateral_metrics(packet_list, client_ip):
     
     return b_metrics
 
+# PART 4-1 指標分組前處理
 def transform_keys(original_dict):
     new_dict = {}
     
@@ -455,39 +451,7 @@ def align_sessions(old_dict, new_dict):
         
     return aligned_dict
 
-def plot_metrics(plot_data, title, unit):
-    plt.figure()
-    
-    cool_colors = ['blue', 'turquoise', 'teal', 'cyan', 'royalblue', 'dodgerblue', 'mediumslateblue', 'darkcyan']
-    session_color_map = {}  # A dictionary to map session numbers to colors
-    color_idx = 0
-    
-    # Sort the group names
-    sorted_groups = sorted(plot_data.keys())
-    
-    for group in sorted_groups:
-        duration_data = plot_data[group]
-        x = list(duration_data.keys())
-        y = [sum(values) / len(values) for values in duration_data.values()]  # Average if multiple values
-        
-        if "Session" in group:
-            session_number = group.split(" ")[1]  # Extract session number
-            
-            # Assign a color if not already assigned
-            if session_number not in session_color_map:
-                session_color_map[session_number] = cool_colors[color_idx]
-                color_idx = (color_idx + 1) % len(cool_colors)  # Loop back to the first color if needed
-            
-            plt.plot(x, y, label=group, linewidth=1.5, linestyle='-', marker='o', color=session_color_map[session_number])
-        else:
-            plt.plot(x, y, label=group, linewidth=1, linestyle='--', color='gray')
-    
-    plt.title(title)
-    plt.xlabel('Capture Duration')
-    plt.ylabel(unit)
-    plt.legend()
-    plt.show()
-
+# PART 4 指標分組儲存
 def process_and_save_data(average_rtt, average_req_resp_delay, reconnection_count, error_packets_count, output_file):
     # Helper function to calculate the average of a list
     def process_data(data_dict):
@@ -523,6 +487,39 @@ def process_and_save_data(average_rtt, average_req_resp_delay, reconnection_coun
                 'Average Error Packets Count': round(processed_error_packets_count[session], 4)
             })
 
+# PART 5 繪製圖表
+def plot_metrics(plot_data, title, unit):
+    plt.figure()
+    
+    cool_colors = ['blue', 'turquoise', 'teal', 'cyan', 'royalblue', 'dodgerblue', 'mediumslateblue', 'darkcyan']
+    session_color_map = {}  # A dictionary to map session numbers to colors
+    color_idx = 0
+    
+    # Sort the group names
+    sorted_groups = sorted(plot_data.keys())
+    
+    for group in sorted_groups:
+        duration_data = plot_data[group]
+        x = list(duration_data.keys())
+        y = [sum(values) / len(values) for values in duration_data.values()]  # Average if multiple values
+        
+        if "Session" in group:
+            session_number = group.split(" ")[1]  # Extract session number
+            
+            # Assign a color if not already assigned
+            if session_number not in session_color_map:
+                session_color_map[session_number] = cool_colors[color_idx]
+                color_idx = (color_idx + 1) % len(cool_colors)  # Loop back to the first color if needed
+            
+            plt.plot(x, y, label=group, linewidth=1.5, linestyle='-', marker='o', color=session_color_map[session_number])
+        else:
+            plt.plot(x, y, label=group, linewidth=1, linestyle='--', color='gray')
+    
+    plt.title(title)
+    plt.xlabel('Capture Duration')
+    plt.ylabel(unit)
+    plt.legend()
+    plt.show()
 
 # 主程式
 def main(client_ip, expected_session_count, capture_file, output_file, time_interval):
@@ -629,25 +626,34 @@ def main(client_ip, expected_session_count, capture_file, output_file, time_inte
     process_and_save_data(average_rtt, average_req_resp_delay, reconnection_count, error_packets_count, output_file)
     
 if __name__ == "__main__":
-    # 方便觀察程式回饋
     logging.basicConfig(level=logging.INFO)
     
-    # 測試組
-    client_ips = '10.0.0.230,10.0.0.200,10.0.0.220,10.0.0.210'.split(',')
-    expected_session_counts = '10,4,2,20'.split(',')
-    capture_files = '03_scenario_generation\\experiment_0\\scenario_0\\comp1.pcap,03_scenario_generation\\experiment_0\\scenario_0\\comp2.pcap,03_scenario_generation\\experiment_0\\scenario_0\\comp3.pcap,03_scenario_generation\\experiment_0\\scenario_0\\comp4.pcap'.split(',')
-    output_file = '01_PacketAnalyze\\data_training.csv'
-    time_interval = 10
-    
-    for client_ip, expected_session_count, capture_file in zip(client_ips, expected_session_counts, capture_files):
-        main(client_ip, int(expected_session_count), capture_file, output_file, time_interval)
-    
+    # 自動化流程
     # client_ip = sys.argv[1]  # 伺服器/主機IP
     # expected_session_count = sys.argv[2] # 伺服器/主機同時處理的session數量
     # capture_file = sys.argv[3] # 擷取封包檔案路徑
     # output_file = sys.argv[4] # 輸出csv檔案路徑
     # time_interval = int(sys.argv[5]) # 數據平均的時間間隔 -秒
-    
+    # 
     # main(client_ip, int(expected_session_count), capture_file, output_file, time_interval)
+    
+    # 測試組-1
+    # client_ip = '10.0.0.210'
+    # expected_session_count = '2'
+    # capture_file = '03_scenario_generation\\experiment_0\\scenario_1\\comp1.pcap'
+    # output_file = '01_PacketAnalyze\\data_training.csv'
+    # time_interval = 10
+    # 
+    # main(client_ip, int(expected_session_count), capture_file, output_file, time_interval)
+    
+    # 測試組-2
+    client_ips = '10.0.0.220,10.0.0.230'.split(',')
+    expected_session_counts = '14,14'.split(',')
+    capture_files = '03_scenario_generation\\experiment_0\\scenario_1\\comp3.pcap,03_scenario_generation\\experiment_0\\scenario_0\\comp4.pcap'.split(',')
+    output_file = '01_PacketAnalyze\\data_training.csv'
+    time_interval = 10
+    
+    for client_ip, expected_session_count, capture_file in zip(client_ips, expected_session_counts, capture_files):
+        main(client_ip, int(expected_session_count), capture_file, output_file, time_interval)
         
     

@@ -12,7 +12,7 @@ from pathlib import Path
 comp_pattern = re.compile(r'comp\d+')
 env_var_pattern = re.compile(r'"([^"]+)":\s*"([^"]+)"')
 
-# PART1: 前置處理，取得拓墣中每個comp上運行的app與其連線的device
+# PART1: 確認所有scenario下每個computer對應的application, device
 def extract_context(file_path, start_phrase, end_phrase):
     with open(file_path, 'r') as file:
         start_index = end_index = None
@@ -28,6 +28,12 @@ def extract_context(file_path, start_phrase, end_phrase):
             return [line for i, line in enumerate(file) if start_index < i < end_index]
 
     return []
+
+def find_line_with_key(lines, key):
+    for line in lines:
+        if key in line:
+            return line.strip()
+    return None
 
 def parse_environment_variables(line):
     env_vars = {}
@@ -59,14 +65,16 @@ def process_scenario_folder(folder):
         return comp_dict
     return {}
 
-# PART2: 依序進行封包解析，並補上封包的拓樸條件
-def initialize_training_data(csv_file_path):
+# PART2: 提取subprocess的變數，執行並得到一半的訓練資料
+def write_headers(csv_file_path):
     headers = ['Scenario', 'Computer', 'Application', 'Device', 'Subscription Order', 'Weight', 'Session', 'Average RTT', 'Average Req Resp Delay', 'Average Reconnection Count', 'Average Error Packets Count']
     with open(csv_file_path, 'a', newline='') as csvfile:
         writer = csv.writer(csvfile)
         if csvfile.tell() == 0:  # File is empty, write headers
             writer.writerow(headers)
 
+
+# PART3: 對應填寫剩下的另一半訓練資料
 def find_device_and_app(context_adding_containers, device_ip, env_vars, comp):
     # Find the device
     device_line = next((line for line in context_adding_containers if line.strip().startswith('dev') and device_ip in line), None)
@@ -120,39 +128,34 @@ def update_data_training(output_file, scenario, comp, app, device, subscription_
 
     return start_index
 
-# 主程式
-def main(folder, result_dicts, time_interval, output_file, start_index):
+def process_scenario(folder, result_dicts, time_interval, output_file, start_index):
     subscription_file_path = Path(folder) / 'subscription_paths.csv'
+    write_headers(output_file)
+
     container_file = Path(folder) / 'containernet_script.py'
-    
-    # 初次創建data_training.csv
-    initialize_training_data(output_file)
-    
     if container_file.exists():
-        # 取得該拓墣生成的hosts
         context_adding_containers = extract_context(container_file, 'Adding docker containers as hosts', '#')
         
-        # 因為t-shark監控點在comp-sw的街線上，所以以comp為單位處理
         for comp, env_vars in result_dicts[Path(folder).name].items():
-            capture_file = next(Path(folder).glob(f'{comp}.pcap'), None)
-            
+            # Find comp's IP
             client_ip_line = next((line for line in context_adding_containers if comp in line), None)
             client_ip = re.search(r'ip=\'(\d+\.\d+\.\d+\.\d+)\'', client_ip_line).group(1) if client_ip_line else None
             
-            # 取得預估連線術語dev連線數配額
+            # Count IPs
             expected_session_count = sum(len(val.split(',')) for val in env_vars.values()) if env_vars else 0
+
+            # Find .pcap file
+            capture_file = next(Path(folder).glob(f'{comp}.pcap'), None)
             
-            # 呼叫opc_traffic_analyze2.py，取得一半的訓練資料 (average_rtt, average_req_resp_delay, average_reconnection_count, average_error_packets_count)
             subprocess.run(['python', '01_PacketAnalyze\\opc_traffic_analyze2.py', client_ip, str(expected_session_count), str(capture_file), str(output_file), str(time_interval)])
 
-            # 取得一半的訓練資料後，對應填寫剩下的另一半訓練資料
+            header = pd.read_csv(output_file, nrows=0)
             session_data = pd.read_csv(output_file, header=0, skiprows=range(1, start_index + 1), nrows=expected_session_count)
             
             if 'Session' in session_data.columns:
                 for _, row in session_data.iterrows():
                     session = row['Session'] if 'Session' in row else None
                     if session:
-                        # 由於session的出現順序是隨機的，所以從該session的資訊反推app, device
                         device_ip = session.split('-')[1]
                         device, app, env_vars = find_device_and_app(context_adding_containers, device_ip, env_vars, comp)
                         app = app.split('_')[0].lower() if app else None
@@ -163,17 +166,24 @@ def main(folder, result_dicts, time_interval, output_file, start_index):
                             app_row = applications_data[applications_data['initials'] == app]
                             if not app_row.empty:
                                 app = app_row.iloc[0]['application']
-                        
-                        # 取得訂閱資訊
+                                
                         subscription_order, weight = find_subscription_order(subscription_file_path, device, f'{app}_{comp}')
-                        
-                        # 填寫剩下的另一半訓練資料
                         start_index = update_data_training(output_file, Path(folder).name, comp, app, device, subscription_order, weight, start_index)
             else:
-                # 捕捉例外，目前無用
+                # 待補
                 pass
             
     return start_index
+
+
+def main(base_path, time_interval, output_file):
+    
+    scenario_folders = glob.glob(os.path.join(base_path, f'*scenario*'))
+    all_results = {Path(folder).name: process_scenario_folder(folder) for folder in scenario_folders}
+
+    start_index=0
+    for folder in scenario_folders:
+        start_index = process_scenario(folder, all_results, time_interval, output_file, start_index)
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
@@ -181,10 +191,8 @@ if __name__ == "__main__":
     base_path = '03_scenario_generation\\experiment_0'
     time_interval = '10'
     output_file = '01_PacketAnalyze\\data_training.csv'
-    start_index=0
     
-    scenario_folders = glob.glob(os.path.join(base_path, f'*scenario*'))
-    result_dicts = {Path(folder).name: process_scenario_folder(folder) for folder in scenario_folders}
-    
-    for folder in scenario_folders:
-        start_index = main(folder, result_dicts, time_interval, output_file, start_index)
+    main(base_path, time_interval, output_file)
+
+# Parameters for the training data that will be calculated:
+# average_rtt, average_req_resp_delay, average_reconnection_count, average_error_packets_count
