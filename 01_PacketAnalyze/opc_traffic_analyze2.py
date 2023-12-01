@@ -1,4 +1,6 @@
 import csv
+import sys
+import json
 import logging
 import pyshark
 import matplotlib.pyplot as plt
@@ -153,12 +155,32 @@ def handle_reconnect_sessions(initial_packet_groups, reconnect_pairs):
             initial_packet_groups[new_key] = initial_packet_groups.pop(old_key) # 重新命名以保留新的session名稱
 
 # PART 2-2: 依照分類結果追蹤sessions
-def sort_sessions_by_length(initial_packet_groups, exclude_keywords, expected_session_count):
-    return sorted(
-        [k for k in initial_packet_groups.keys() if all(ex not in k for ex in exclude_keywords)],
-        key=lambda k: len(initial_packet_groups[k]),
-        reverse=True
-    )[:expected_session_count]
+def sort_and_filter_sessions(initial_packet_groups, exclude_keywords, ip_quota):
+    ip_count = {}
+    filtered_pairs = []
+    
+    filtered_keys = [
+        key for key in initial_packet_groups.keys()
+        if all(exclude_keyword not in key for exclude_keyword in exclude_keywords)
+    ]
+    
+    sorted_keys = sorted(filtered_keys, key=lambda key: len(initial_packet_groups[key]), reverse=True)
+    
+    for pair in sorted_keys:
+        ip1, ip2 = pair.split('-')
+        ip1 = ip1.split(':')[0]
+        ip2 = ip2.split(':')[0]
+        
+        for ip in [ip1, ip2]:
+            if ip in ip_quota:
+                ip_count[ip] = ip_count.get(ip, 0) + 1
+                
+                if ip_count[ip] <= ip_quota[ip]:
+                    filtered_pairs.append(pair)
+                    break
+    
+    return filtered_pairs
+    
 
 def initialize_session_tracking(packet_groups, session_track, sorted_group_keys, session_key_history):
     for i, session_name in enumerate(session_track.keys()):
@@ -209,7 +231,7 @@ def update_session_tracking(initial_packet_groups, session_track, reconnect_pair
                 except StopIteration:
                     pass       
 
-def session_tracking(initial_packet_groups, session_track, reconnect_pairs, session_key_history, expected_session_count):
+def session_tracking(initial_packet_groups, session_track, reconnect_pairs, session_key_history, ip_quota):
     """更新各session的狀態
 
     Args:
@@ -221,19 +243,19 @@ def session_tracking(initial_packet_groups, session_track, reconnect_pairs, sess
         _type_: _description_
     """
     if all(val == 'NONE' for val in session_track.values()): # 首次執行
-        sorted_group_keys = sort_sessions_by_length(initial_packet_groups, 'background', expected_session_count)
+        sorted_group_keys = sort_and_filter_sessions(initial_packet_groups, 'background', ip_quota)
         initialize_session_tracking(initial_packet_groups, session_track, sorted_group_keys, session_key_history)
         
         return initial_packet_groups
         
     else: # 非首次執行，確認session是否有變動
-        sorted_group_keys = sort_sessions_by_length(initial_packet_groups, ['background', 'Session'], expected_session_count)
+        sorted_group_keys = sort_and_filter_sessions(initial_packet_groups, ['background', 'Session'], ip_quota)
         update_session_tracking(initial_packet_groups, session_track, reconnect_pairs, sorted_group_keys, session_key_history)
         
         return initial_packet_groups
 
 # PART 2: 依照 session/訂閱關係 做分類
-def classify_packets(packet_list, client_ip, expected_session_count, session_track, session_key_history):
+def classify_packets(packet_list, client_ip, expected_session_count, ip_quota, session_track, session_key_history):
     """將封包分類成不同的session
 
     Args:
@@ -250,14 +272,15 @@ def classify_packets(packet_list, client_ip, expected_session_count, session_tra
     if len(grouped_packets_info) > expected_session_count: # 有多餘的session，可能是異常，也可能是reconnect
         reconnect_pairs = find_reconnect_sessions(grouped_packets_info, expected_session_count)
         handle_reconnect_sessions(initial_packet_groups, reconnect_pairs)
+        
     
-    sessions = session_tracking(initial_packet_groups, session_track, reconnect_pairs, session_key_history, expected_session_count)
+    sessions = session_tracking(initial_packet_groups, session_track, reconnect_pairs, session_key_history, ip_quota)
     
     return sessions
 
 # PART 3: 計算通訊指標
 def unilateral_metrics(packet_list, client_ip):
-    """計算單向通訊指標: 平均單包吞吐量、平均總吞吐量、平均發送頻率
+    """計算單向通訊指標: 平均單包吞吐量、平均總吞吐量、平均發送頻率 #! 目前已經不再使用了
 
     Args:
         packet_list [packet_object]: 時間間隔內、同一個session的封包物件
@@ -309,7 +332,7 @@ def get_tcp_flags(flag_hex):
 
     return flag_dict
 
-def bilateral_metrics(packet_list, client_ip):
+def bilateral_metrics(packet_list, session_pair):
     """_summary_
 
     Args:
@@ -338,12 +361,11 @@ def bilateral_metrics(packet_list, client_ip):
         src_port = packet[packet.transport_layer].srcport
         dst_port = packet[packet.transport_layer].dstport
         
-        server_ip = dst_ip if src_ip == client_ip else src_ip
-        server_port = dst_port if src_ip == client_ip else src_port
-        client_port = src_port if src_ip == client_ip else dst_port            
+        server_ip = session_pair.split('-')[1]
+        server_port = 4840
+        client_ip = session_pair.split('-')[0]
+        client_port = src_port if src_ip == client_ip else dst_port
         
-        ip = packet.ip.src
-        client_port = packet[packet.transport_layer].srcport if ip == client_ip else packet[packet.transport_layer].dstport
         flags = get_tcp_flags(packet.tcp.flags)
         seq = int(packet.tcp.seq)
         ack = int(packet.tcp.ack)
@@ -384,10 +406,10 @@ def bilateral_metrics(packet_list, client_ip):
             e_messages.pop() # 將上次加入的異常封包移除
             session_indexes['holding_SYN_flag'] = False
         
-        if ip == server_ip and seq <= session_indexes['max_resp_seq']: # 多種原因，高機率是某種retransmission
+        if src_ip == server_ip and seq <= session_indexes['max_resp_seq']: # 多種原因，高機率是某種retransmission
             e_messages.append(order)
             continue
-        elif ip != server_ip and seq <= session_indexes['max_req_seq']:
+        elif src_ip != server_ip and seq <= session_indexes['max_req_seq']:
             e_messages.append(order)
             continue
         
@@ -405,7 +427,7 @@ def bilateral_metrics(packet_list, client_ip):
                 track_packets[seq + tcp_segment_len] = {'timestamp': timestamp, 'seq': seq, 'ack': ack, 'opc_req_handle': opc_req_handle} # 下一個對應的回應封包其ack值會相等此次封包req+tcp_segment_len
         
         # 更新session_indexes
-        if ip == server_ip: # 這是封回應封包
+        if src_ip == server_ip: # 這是封回應封包
             session_indexes['max_resp_seq'] = seq
         else:
             session_indexes['max_req_seq'] = seq
@@ -437,16 +459,20 @@ def transform_keys(original_dict):
     return new_dict
 
 def align_sessions(old_dict, new_dict):
-    record = {k.split(': ')[1]: k.split(': ')[0] for k in old_dict.keys()}
+    record = [(k.split(': ')[1], k.split(': ')[0]) for k in old_dict.keys()]
     aligned_dict = {}
     
     for new_key, value in new_dict.items():
         session, ip_pair = new_key.split(': ')
-        if ip_pair in record:
-            aligned_key = f"{record[ip_pair]}: {ip_pair}"
-            del record[ip_pair]
+        matched_sessions = [sess for ip, sess in record if ip == ip_pair]
+
+        if matched_sessions:
+            # Use the first matched session and remove it from record
+            aligned_key = f"{matched_sessions[0]}: {ip_pair}"
+            record = [(ip, sess) for ip, sess in record if not (ip == ip_pair and sess == matched_sessions[0])]
         else:
             aligned_key = new_key
+        
         aligned_dict[aligned_key] = value
         
     return aligned_dict
@@ -522,22 +548,23 @@ def plot_metrics(plot_data, title, unit):
     plt.show()
 
 # 主程式
-def main(client_ip, expected_session_count, capture_file, output_file, time_interval):
+def main(client_ip, expected_session_count, ip_quota, capture_file, output_file, time_interval):
     
     capture_duration = 0 # 擷取封包的時間長度
     session_track ={f'Session {i+1}': 'NONE' for i in range(expected_session_count)}
     session_key_history = {}
     
-    u_metrics_dict = defaultdict(lambda: defaultdict(lambda: defaultdict(dict))) # 單向通訊指標
+    # u_metrics_dict = defaultdict(lambda: defaultdict(lambda: defaultdict(dict))) # 單向通訊指標
+    
+    # request_data_load = defaultdict(lambda: defaultdict(float))
+    # request_data_throughput = defaultdict(lambda: defaultdict(float))
+    # request_data_frequency = defaultdict(lambda: defaultdict(float))
+    
+    # response_data_load = defaultdict(lambda: defaultdict(float))
+    # response_data_throughput = defaultdict(lambda: defaultdict(float))
+    # response_data_frequency = defaultdict(lambda: defaultdict(float))
+    
     b_metrics_dict = defaultdict(lambda: defaultdict(lambda: defaultdict(dict))) # 雙向通訊指標
-    
-    request_data_load = defaultdict(lambda: defaultdict(float))
-    request_data_throughput = defaultdict(lambda: defaultdict(float))
-    request_data_frequency = defaultdict(lambda: defaultdict(float))
-    
-    response_data_load = defaultdict(lambda: defaultdict(float))
-    response_data_throughput = defaultdict(lambda: defaultdict(float))
-    response_data_frequency = defaultdict(lambda: defaultdict(float))
     
     average_rtt = defaultdict(lambda: defaultdict(float))
     average_req_resp_delay = defaultdict(lambda: defaultdict(float))
@@ -559,9 +586,10 @@ def main(client_ip, expected_session_count, capture_file, output_file, time_inte
         # logging.info('---')
         
         # 分類封包
-        classified_packets = classify_packets(packet_list, client_ip, expected_session_count, session_track, session_key_history)
+        classified_packets = classify_packets(packet_list, client_ip, expected_session_count, ip_quota, session_track, session_key_history)
         classified_packets = transform_keys(classified_packets)
-        classified_packets = align_sessions(history_classified_packets, classified_packets)
+        if capture_duration != 0:
+            classified_packets = align_sessions(history_classified_packets, classified_packets)
         history_classified_packets = classified_packets
         
         # 分類封包 -測試        
@@ -576,7 +604,7 @@ def main(client_ip, expected_session_count, capture_file, output_file, time_inte
         # 計算通訊指標
         for key, value in classified_packets.items(): # key為client_ip-client_port, value為[packet1, packet2, ...]
             
-            u_metrics = unilateral_metrics(value, client_ip)
+            # u_metrics = unilateral_metrics(value, client_ip)
             b_metrics = bilateral_metrics(value, (key.split(': ')[1]).split(':')[0])
             
             # 計算單向通訊指標 -測試
@@ -590,16 +618,16 @@ def main(client_ip, expected_session_count, capture_file, output_file, time_inte
             # logging.info(f'RTT: {b_metrics["avg_rtt"]}, Request-Response Delay: {b_metrics["avd_req_resp_delay"]}, Reconnection_count: {len(b_metrics["h_messages"])}, Error_count: {len(b_metrics["e_messages"])}')
             # logging.info('---')
             
-            u_metrics_dict[capture_duration][key] = u_metrics
+            # u_metrics_dict[capture_duration][key] = u_metrics
             b_metrics_dict[capture_duration][key] = b_metrics
             
-            request_data_load[key][capture_duration] = u_metrics['request']['avg_load']
-            request_data_throughput[key][capture_duration]= u_metrics['request']['avg_throughput']
-            request_data_frequency[key][capture_duration]= u_metrics['request']['avg_frequency']
+            # request_data_load[key][capture_duration] = u_metrics['request']['avg_load']
+            # request_data_throughput[key][capture_duration]= u_metrics['request']['avg_throughput']
+            # request_data_frequency[key][capture_duration]= u_metrics['request']['avg_frequency']
                     
-            response_data_load[key][capture_duration] = u_metrics['response']['avg_load']
-            response_data_throughput[key][capture_duration] = u_metrics['response']['avg_throughput']
-            response_data_frequency[key][capture_duration] = u_metrics['response']['avg_frequency']
+            # response_data_load[key][capture_duration] = u_metrics['response']['avg_load']
+            # response_data_throughput[key][capture_duration] = u_metrics['response']['avg_throughput']
+            # response_data_frequency[key][capture_duration] = u_metrics['response']['avg_frequency']
                     
             average_rtt[key][capture_duration] = b_metrics['avg_rtt']
             average_req_resp_delay[key][capture_duration] = b_metrics['avd_req_resp_delay']
@@ -629,31 +657,33 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     
     # 自動化流程
-    # client_ip = sys.argv[1]  # 伺服器/主機IP
-    # expected_session_count = sys.argv[2] # 伺服器/主機同時處理的session數量
-    # capture_file = sys.argv[3] # 擷取封包檔案路徑
-    # output_file = sys.argv[4] # 輸出csv檔案路徑
-    # time_interval = int(sys.argv[5]) # 數據平均的時間間隔 -秒
-    # 
-    # main(client_ip, int(expected_session_count), capture_file, output_file, time_interval)
+    client_ip = sys.argv[1]  # 伺服器/主機IP
+    expected_session_count = sys.argv[2] # 伺服器/主機同時處理的session數量
+    ip_quota = json.loads(sys.argv[3]) # session中每個ip可以分配到的數量
+    capture_file = sys.argv[4] # 擷取封包檔案路徑
+    output_file = sys.argv[5] # 輸出csv檔案路徑
+    time_interval = int(sys.argv[6]) # 數據平均的時間間隔 -秒
+    
+    main(client_ip, int(expected_session_count), ip_quota, capture_file, output_file, time_interval)
     
     # 測試組-1
-    # client_ip = '10.0.0.210'
-    # expected_session_count = '2'
-    # capture_file = '03_scenario_generation\\experiment_0\\scenario_1\\comp1.pcap'
+    # client_ip = '10.0.0.220'
+    # expected_session_count = '14'
+    # ip_quota = json.loads('{"10.0.0.120": 1, "10.0.0.121": 1, "10.0.0.122": 1, "10.0.0.123": 1, "10.0.0.124": 2, "10.0.0.125": 2, "10.0.0.130": 1, "10.0.0.131": 1, "10.0.0.134": 1, "10.0.0.135": 1, "10.0.0.136": 1, "10.0.0.137": 1}')
+    # capture_file = '03_scenario_generation\\experiment_0\\scenario_1\\comp3.pcap'
     # output_file = '01_PacketAnalyze\\data_training.csv'
     # time_interval = 10
-    # 
-    # main(client_ip, int(expected_session_count), capture_file, output_file, time_interval)
+    
+    # main(client_ip, int(expected_session_count), ip_quota, capture_file, output_file, time_interval)
     
     # 測試組-2
-    client_ips = '10.0.0.220,10.0.0.230'.split(',')
-    expected_session_counts = '14,14'.split(',')
-    capture_files = '03_scenario_generation\\experiment_0\\scenario_1\\comp3.pcap,03_scenario_generation\\experiment_0\\scenario_0\\comp4.pcap'.split(',')
-    output_file = '01_PacketAnalyze\\data_training.csv'
-    time_interval = 10
+    # client_ips = '10.0.0.220,10.0.0.230'.split(',')
+    # expected_session_counts = '14,14'.split(',')
+    # capture_files = '03_scenario_generation\\experiment_0\\scenario_1\\comp3.pcap,03_scenario_generation\\experiment_0\\scenario_0\\comp4.pcap'.split(',')
+    # output_file = '01_PacketAnalyze\\data_training.csv'
+    # time_interval = 10
     
-    for client_ip, expected_session_count, capture_file in zip(client_ips, expected_session_counts, capture_files):
-        main(client_ip, int(expected_session_count), capture_file, output_file, time_interval)
+    # for client_ip, expected_session_count, capture_file in zip(client_ips, expected_session_counts, capture_files):
+    #     main(client_ip, int(expected_session_count), capture_file, output_file, time_interval)
         
     

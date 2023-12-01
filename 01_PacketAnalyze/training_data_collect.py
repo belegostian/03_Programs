@@ -3,6 +3,7 @@ import re
 import csv
 import time
 import glob
+import json
 import logging
 import subprocess
 import pandas as pd
@@ -66,6 +67,16 @@ def initialize_training_data(csv_file_path):
         writer = csv.writer(csvfile)
         if csvfile.tell() == 0:  # File is empty, write headers
             writer.writerow(headers)
+
+def count_ip_quota(env_vars):
+    ip_quota = {}
+    
+    for key, value in env_vars.items():
+        ips = value.split(',')
+        for ip in ips:
+            ip_quota[ip] = ip_quota.get(ip, 0) + 1
+    
+    return ip_quota
 
 def find_device_and_app(context_adding_containers, device_ip, env_vars, comp):
     # Find the device
@@ -141,9 +152,10 @@ def main(folder, result_dicts, time_interval, output_file, start_index):
             
             # 取得預估連線術語dev連線數配額
             expected_session_count = sum(len(val.split(',')) for val in env_vars.values()) if env_vars else 0
+            ip_quota = count_ip_quota(env_vars)
             
             # 呼叫opc_traffic_analyze2.py，取得一半的訓練資料 (average_rtt, average_req_resp_delay, average_reconnection_count, average_error_packets_count)
-            subprocess.run(['python', '01_PacketAnalyze\\opc_traffic_analyze2.py', client_ip, str(expected_session_count), str(capture_file), str(output_file), str(time_interval)])
+            subprocess.run(['python', '01_PacketAnalyze\\opc_traffic_analyze2.py', client_ip, str(expected_session_count), json.dumps(ip_quota), str(capture_file), str(output_file), str(time_interval)])
 
             # 取得一半的訓練資料後，對應填寫剩下的另一半訓練資料
             session_data = pd.read_csv(output_file, header=0, skiprows=range(1, start_index + 1), nrows=expected_session_count)
