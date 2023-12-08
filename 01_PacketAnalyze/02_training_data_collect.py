@@ -155,7 +155,7 @@ def main(folder, result_dicts, time_interval, output_file, start_index):
             ip_quota = count_ip_quota(env_vars)
             
             # 呼叫opc_traffic_analyze2.py，取得一半的訓練資料 (average_rtt, average_req_resp_delay, average_reconnection_count, average_error_packets_count)
-            subprocess.run(['python', '01_PacketAnalyze\\opc_traffic_analyze2.py', client_ip, str(expected_session_count), json.dumps(ip_quota), str(capture_file), str(output_file), str(time_interval)])
+            subprocess.run(['python', '01_PacketAnalyze\\01_opc_traffic_analyze2.py', client_ip, str(expected_session_count), json.dumps(ip_quota), str(capture_file), str(output_file), str(time_interval)])
 
             # 取得一半的訓練資料後，對應填寫剩下的另一半訓練資料
             session_data = pd.read_csv(output_file, header=0, skiprows=range(1, start_index + 1), nrows=expected_session_count)
