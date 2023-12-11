@@ -277,19 +277,22 @@ for scenario in scenario_folders:
         data = Data(x=node_features_tensor, edge_index=adjacency_index, edge_attr=edge_features_tensor, y=qos_score_tensor)
         pyg_graphs.append(data)
 
-train_val_graphs, test_graphs = train_test_split(pyg_graphs, test_size=0.2, random_state=42)
-train_graphs, val_graphs = train_test_split(train_val_graphs, test_size=0.25, random_state=42)
+train_val_graphs, test_graphs = train_test_split(pyg_graphs, test_size=0.2, random_state=100)
+train_graphs, val_graphs = train_test_split(train_val_graphs, test_size=0.25, random_state=100)
 
-train_loader = DataLoader(train_graphs, batch_size=36, shuffle=True)
-val_loader = DataLoader(val_graphs, batch_size=36, shuffle=False)
-test_loader = DataLoader(test_graphs, batch_size=36, shuffle=False)
+train_loader = DataLoader(train_graphs, batch_size=18, shuffle=True)
+val_loader = DataLoader(val_graphs, batch_size=18, shuffle=False)
+test_loader = DataLoader(test_graphs, batch_size=18, shuffle=False)
 
 class OptimizedGATModel(torch.nn.Module):
     def __init__(self, num_node_features, num_classes):
         super(OptimizedGATModel, self).__init__()
         # Adjust the number of output features and heads in each layer
-        self.conv1 = GATConv(num_node_features, 32, heads=4, dropout=0.3) # Example change
-        self.conv2 = GATConv(32 * 4, 16, heads=2, concat=False, dropout=0.3) # Example change
+        # self.conv1 = GATConv(num_node_features, 32, heads=4, dropout=0.3) # Example change
+        # self.conv2 = GATConv(32 * 4, 16, heads=2, concat=False, dropout=0.3) # Example change
+        
+        self.conv1 = GATConv(num_node_features, 64, heads=6, dropout=0.4) # Example change
+        self.conv2 = GATConv(64 * 6, 16, heads=3, concat=False, dropout=0.4) # Example change
 
         self.fc = torch.nn.Linear(16, num_classes)  # Linear layer to adjust the output dimension
 
@@ -422,14 +425,14 @@ def train(model, train_loader, val_loader, num_epochs=100):
         print()
         print(f'Epoch {epoch+1}/{num_epochs}, Loss: {avg_loss:.4f}')
         
-        loss, rmse, r2 = validate(model, val_loader)
+        loss, rmse, mae = validate(model, val_loader)
         val_losses.append(loss)
         val_rmses.append(rmse)
-        val_r2s.append(r2)
+        val_r2s.append(mae)
         print(f'Validation Loss: {loss:.4f}')
         print()
         print(f'Root Mean Squared Error: {rmse:.4f}')
-        print(f'R^2 Score: {r2:.4f}')
+        print(f'Mean Absolute Error: {mae:.4f}')
         print()
         print('----------------------------------------------')
         
@@ -446,8 +449,8 @@ def train(model, train_loader, val_loader, num_epochs=100):
     # Plotting RMSE and R^2
     plt.subplot(1, 2, 2)
     plt.plot(val_rmses, label='Validation RMSE')
-    plt.plot(val_r2s, label='Validation R^2 Score')
-    plt.title('Validation RMSE and R^2 Score')
+    plt.plot(val_r2s, label='Validation MAE')
+    plt.title('Validation RMSE and MAE')
     plt.xlabel('Epochs')
     plt.ylabel('Metric Value')
     plt.legend()
@@ -479,9 +482,9 @@ def validate(model, loader):
     rmse = mean_squared_error(all_actuals.cpu(), all_preds.cpu(), squared=False)
 
     # Calculate R^2 Score
-    r2 = r2_score(all_actuals.cpu(), all_preds.cpu())
+    mae = mean_absolute_error(all_actuals.cpu(), all_preds.cpu())
 
-    return total_loss / len(loader), rmse, r2
+    return total_loss / len(loader), rmse, mae
 
 model = OptimizedGATModel(num_node_features, num_classes)
 # model = SimplifiedGATModel(num_node_features, num_edge_features, num_classes)
