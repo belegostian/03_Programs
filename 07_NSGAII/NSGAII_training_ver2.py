@@ -64,18 +64,13 @@ switch_transformations = {
 }
 switch_dict = csv_to_dict('03_scenario_generation\\experiment_0\\switches.csv', 'switch', switch_transformations)
 
-# individual = Individual.generate_individual(application_dict, computer_dict, device_dict, switch_dict)
-
 # 定義目標方程式
 subscription_split_fields = {
     'path': ','
 }
 subscription_dict = csv_to_dict('03_scenario_generation\\experiment_0\\subscriptions.csv', 'subscription', None, subscription_split_fields)
 
-# gat_rate = GAT.graph_attention_network(individual)
-# rpn_rate = RPN.risk_primary_number(individual)
-
-# 設定 DEAP 模型參數
+#* 設定 DEAP 模型參數
 # Create types
 creator.create("FitnessMulti", base.Fitness, weights=(1.0, -1.0))  # Assuming minimization problems
 creator.create("Individual", list, fitness=creator.FitnessMulti)
@@ -170,11 +165,6 @@ for gen in range(generations):
         fitness_values = toolbox.evaluate(ind)
         ind.fitness.values = fitness_values
         
-        # if fitness_values[0] >100 or fitness_values[0] < -1 or fitness_values[1] > 1 or fitness_values[1] < -100:
-        #     print(fitness_values)
-        #     print(ind)
-        #     print("Error point")
-        
     population = toolbox.select(offspring, k=len(population))
     
     # Store fitness values of the current generation
@@ -195,18 +185,6 @@ fitness_values = [ind.fitness.values for ind in population]
 QoS_mean_fitness = round(sum(f[0] for f in fitness_values) / len(population), 3)
 RPN_mean_fitness = round(sum(f[1] for f in fitness_values) / len(population), 3)
 print("Mean fitness:", QoS_mean_fitness, RPN_mean_fitness)
-
-# # Plot the final Pareto front
-# plot_pareto_front(all_fitness[-1])
-
-# # Optional: Plotting other statistics like mean fitness over generations
-# mean_fitness = [sum(f[0] for f in gen_fit) / len(gen_fit) for gen_fit in all_fitness]
-# plt.plot(mean_fitness)
-# plt.title("Mean Fitness Over Generations")
-# plt.xlabel("Generation")
-# plt.ylabel("Mean Fitness")
-# plt.grid(True)
-# plt.show()
 
 # wait for 
 input("Press enter to exit ;)")

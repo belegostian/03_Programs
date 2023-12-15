@@ -42,6 +42,9 @@ def update_computer_dict(computer_dict, individual, first_range):
     return computer_dict
 
 def update_subscription_dict(G, subscription_dict):
+    if subscription_dict is None:
+        return None
+    
     app_nodes = {node for node in G.nodes if node.startswith("app")}
     for sub, sub_info in subscription_dict.items():
         device = sub_info["device"]
@@ -59,27 +62,7 @@ def update_subscription_dict(G, subscription_dict):
             sub_info["path"] = shortest_path
     return subscription_dict
 
-def data_preprocess(application_dict, computer_dict, device_dict, switch_dict, subscription_dict, individual):
-
-    # 特徵輔助資料-2 (網路拓撲)
-    network_graph, first_range = individual_to_graph(switch_dict, device_dict, computer_dict, individual)
-    computer_dict = update_computer_dict(computer_dict, individual, first_range)
-    
-    # 避免新一代拓樸變異後無法產生正確路徑
-    if update_subscription_dict(network_graph, subscription_dict) is None:
-        return None
-    
-    subscription_dict = update_subscription_dict(network_graph, subscription_dict)
-    
-    # 因為變數會被重複使用
-    for app, app_info in application_dict.items():
-        if isinstance(app_info, dict) and "name" in app_info:
-            app_info['app_type'] = app_info.pop('name')
-    
-
-    for dev, dev_info in device_dict.items():
-        if isinstance(dev_info, dict) and "type" in dev_info:
-            dev_info['dev_type'] = dev_info.pop('type')
+def data_preprocess(application_dict, computer_dict, device_dict, switch_dict, subscription_dict, network_graph):
 
     # 資料集
     data = []
@@ -208,24 +191,46 @@ class OptimizedGATModel(torch.nn.Module):
         return x
 
 def graph_attention_network(application_dict, computer_dict, device_dict, switch_dict, subscription_dict, individual):
-    num_node_features = 35
-    num_classes = 1
-    model = OptimizedGATModel(num_node_features, num_classes)
-
-    model.load_state_dict(torch.load('06_GAT\model_state_dict.pth'))
-    model.eval()
-
-    if data_preprocess(application_dict, computer_dict, device_dict, switch_dict, subscription_dict, individual) is None:
-        return -10
+    network_graph, first_range = individual_to_graph(switch_dict, device_dict, computer_dict, individual)
+    computer_dict = update_computer_dict(computer_dict, individual, first_range)
     
-    data = data_preprocess(application_dict, computer_dict, device_dict, switch_dict, subscription_dict, individual)
-    predict = []
-    for i in range(len(data)):
-        with torch.no_grad():
-            predict.append(model(data[i]).item())
-            
-    # 加權重
-    for pred, sub in zip (predict, subscription_dict.values()):
-        pred = pred * float(sub['weight'])
+    # 因為變數會被重複使用
+    for app_info in application_dict.values():
+        if isinstance(app_info, dict) and "name" in app_info:
+            app_info['app_type'] = app_info.pop('name')
+    
+
+    for dev_info in device_dict.values():
+        if isinstance(dev_info, dict) and "type" in dev_info:
+            dev_info['dev_type'] = dev_info.pop('type')
         
-    return round(sum(predict),8)
+    # 避免新一代拓樸變異後無法產生正確路徑
+    if update_subscription_dict(network_graph, subscription_dict) is not None:
+        subscription_dict = update_subscription_dict(network_graph, subscription_dict)
+        
+        if subscription_dict is None:
+            return -1
+        
+        num_node_features = 35
+        num_classes = 1
+        model = OptimizedGATModel(num_node_features, num_classes)
+
+        model.load_state_dict(torch.load('06_GAT\model_state_dict.pth'))
+        model.eval()
+        
+        data = data_preprocess(application_dict, computer_dict, device_dict, switch_dict, subscription_dict, network_graph)
+        predict = []
+        for i in range(len(data)):
+            with torch.no_grad():
+                predict.append(model(data[i]).item())
+                
+        # 加權重
+        for pred, sub in zip (predict, subscription_dict.values()):
+            pred = pred * float(sub['weight'])
+            
+        return round(sum(predict),4)
+        
+    else:
+        return -1
+    
+    
