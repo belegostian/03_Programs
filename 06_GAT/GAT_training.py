@@ -180,11 +180,12 @@ for scenario in scenario_folders:
         
         node_features  = []
         single_label_columns = ['dev_type', 'app_type', 'role']
-        multi_label_columns = ['running_apps', 'target_device']
-        excluded_columns = single_label_columns + multi_label_columns
+        multi_label_columns = ['target_device']
+        dynamic_label_columns = ['running_apps']
+        excluded_columns = single_label_columns + multi_label_columns + dynamic_label_columns
         
         for item in all_lists:
-            new_dict = {key: None if key in single_label_columns else [] if key in multi_label_columns else 0 for key in all_keys}
+            new_dict = {key: None if key in single_label_columns else [] if key in multi_label_columns or key in dynamic_label_columns else 0 for key in all_keys}
             new_dict.update(item)
             node_features.append(new_dict)
         
@@ -200,6 +201,20 @@ for scenario in scenario_folders:
         for col in multi_label_columns:
             encoded = mlb.fit_transform([i[col] for i in node_features])
             mlb_features_dict[col].extend(encoded)
+            
+        dynamic_features_dict = {col: [] for col in dynamic_label_columns}
+        for col in dynamic_label_columns:
+            
+            encoded = []
+            for i in range(len(node_features)):
+                dynamic_app_list = [0] * len(application_dict.keys())
+                
+                for d_app in node_features[i][col]:
+                    dynamic_app_list[int(d_app[-1]) - 1] = 1
+                
+                encoded.append(dynamic_app_list)
+        
+            dynamic_features_dict[col].extend(encoded)
 
         # 標準化數值特徵
         scaler = StandardScaler()
@@ -214,6 +229,9 @@ for scenario in scenario_folders:
                 combined_row.extend(ohe_features_dict[col][i])
             for col in multi_label_columns:
                 combined_row.extend(mlb_features_dict[col][i])
+            for col in dynamic_label_columns:
+                combined_row.extend(dynamic_features_dict[col][i])    
+            
             combined_row.extend(numerical_features[i])
             combined_node_features.append(combined_row)
             
