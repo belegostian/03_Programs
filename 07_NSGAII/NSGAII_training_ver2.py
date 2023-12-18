@@ -1,5 +1,6 @@
 import csv
 import ast
+import numpy
 
 def csv_to_dict(file_path, key_field, transformations=None, split_fields=None):
     data_dict = {}
@@ -22,7 +23,12 @@ def csv_to_dict(file_path, key_field, transformations=None, split_fields=None):
     return data_dict
 
 import random
-from deap import base, creator, tools, algorithms
+from deap import algorithms
+from deap import base
+from deap import benchmarks
+from deap.benchmarks.tools import diversity, convergence, hypervolume
+from deap import creator
+from deap import tools
 from functools import partial
 import Individual
 import GAT
@@ -33,13 +39,14 @@ def create_types():
     creator.create("Individual", list, fitness=creator.FitnessMulti)
     
 def init_toolbox(toolbox, application_dict, computer_dict, device_dict, switch_dict, subscription_dict):
-    toolbox.register("individual", tools.initIterate, creator.Individual, partial(Individual.generate_individual, application_dict, computer_dict, device_dict, switch_dict))
+    toolbox.register("generate", Individual.generate_individual, application_dict, computer_dict, device_dict, switch_dict)
+    toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.generate)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
     toolbox.register("mate", tools.cxTwoPoint)
     toolbox.register("mutate", partial(custom_mutate, switch_dict, device_dict, computer_dict, application_dict), indpb=0.1)
-    toolbox.register("select", tools.selNSGA2)
     toolbox.register("evaluate", evaluate_individual, GAT=GAT, RPN=RPN, application_dict=application_dict, computer_dict=computer_dict, device_dict=device_dict, switch_dict=switch_dict, subscription_dict=subscription_dict)
+    toolbox.register("select", tools.selNSGA2)
 
 def custom_mutate(switch_dict, device_dict, computer_dict, application_dict, individual, indpb):
     # 前一部分的變異
@@ -113,7 +120,9 @@ def dynamic_pareto_plot(all_fitness, pareto_front, ax, scat_current_gen, scat_pr
     plt.draw()
     plt.pause(0.1)  # Pause to update the plot
 
-def main():
+def main(seed=None):
+    random.seed(seed)
+    
     application_transformations = {
         'response_timeout': float,
         'cpu_usage (%)': float,
@@ -156,42 +165,110 @@ def main():
     fig, ax, scat_current_gen, scat_previous_gens, scat_pareto_front = init_plot()
     all_fitness = []
     
-    population = toolbox.population(n=50)
-    for gen in range(100):
-        offspring = algorithms.varAnd(population, toolbox, cxpb=0.8, mutpb=0.2)
-        fits = toolbox.map(toolbox.evaluate, offspring)
-        
-        for ind in offspring:
-            fitness_values = toolbox.evaluate(ind)
-            ind.fitness.values = fitness_values
+    # population = toolbox.population(n=20)
+    # for gen in range(20):
+    #     offspring = algorithms.varAnd(population, toolbox, cxpb=0.8, mutpb=0.2)
+    #     fits = toolbox.map(toolbox.evaluate, offspring)
             
-        population = toolbox.select(offspring, k=len(population))
+    #     for ind, fit in zip(offspring, fits):
+    #         ind.fitness.values = fit
+            
+    #     population = toolbox.select(offspring, k=len(population))
+        
+    #     # Store fitness values of the current generation
+    #     gen_fitness = [ind.fitness.values for ind in population]
+    #     all_fitness.append(gen_fitness)
+        
+    #     # 提取帕累托前沿
+    #     pareto_front = tools.sortNondominated(population, len(population), first_front_only=True)[0]
+    #     pareto_front_fitness = [ind.fitness.values for ind in pareto_front]
+
+    #     # Update the dynamic plot
+    #     dynamic_pareto_plot(all_fitness, pareto_front_fitness, ax, scat_current_gen, scat_previous_gens, scat_pareto_front)
+    #     print(f"Generation {gen} completed")
+        
+    #     fitness_values = [ind.fitness.values for ind in population]
+    #     QoS_mean_fitness = round(sum(f[0] for f in fitness_values) / len(population), 3)
+    #     RPN_mean_fitness = round(sum(f[1] for f in fitness_values) / len(population), 3)
+    #     print("Mean fitness:", QoS_mean_fitness, RPN_mean_fitness)
+    
+    cxpb, mutpb, mu, ngen = 0.8, 0.2, 16, 16
+    
+    stats = tools.Statistics(lambda ind: ind.fitness.values)
+    stats.register("avg", numpy.mean, axis=0)
+    stats.register("std", numpy.std, axis=0)
+    stats.register("min", numpy.min, axis=0)
+    stats.register("max", numpy.max, axis=0)
+    
+    logbook = tools.Logbook()
+    logbook.header = "gen", "evals", "std", "min", "avg", "max"
+    
+    pop = toolbox.population(n=mu)
+    
+    invalid_ind = [ind for ind in pop if not ind.fitness.valid]
+    fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
+    for ind, fit in zip(invalid_ind, fitnesses):
+        ind.fitness.values = fit
+        
+    pop = toolbox.select(pop, len(pop))
+    
+    record = stats.compile(pop)
+    logbook.record(gen=0, evals=len(invalid_ind), **record)
+    print(logbook.stream)
+        
+    for gen in range(ngen):
+        offspring = tools.selTournamentDCD(pop, len(pop))
+        offspring = [toolbox.clone(ind) for ind in offspring]
+        
+        for ind1, ind2 in zip(offspring[::2], offspring[1::2]):
+            if random.random() < cxpb:
+                toolbox.mate(ind1, ind2)
+                
+            toolbox.mutate(ind1)
+            toolbox.mutate(ind2)
+            del ind1.fitness.values, ind2.fitness.values
+                
+        invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+        fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
+        for ind, fit in zip(invalid_ind, fitnesses):
+            ind.fitness.values = fit
+            
+        pop = toolbox.select(pop + offspring, mu)
+        record = stats.compile(pop)
+        logbook.record(gen=gen, evals=len(invalid_ind), **record)
+        print(logbook.stream)
         
         # Store fitness values of the current generation
-        gen_fitness = [ind.fitness.values for ind in population]
+        gen_fitness = [ind.fitness.values for ind in pop]
         all_fitness.append(gen_fitness)
         
         # 提取帕累托前沿
-        pareto_front = tools.sortNondominated(population, len(population), first_front_only=True)[0]
+        pareto_front = tools.sortNondominated(pop, len(pop), first_front_only=True)[0]
         pareto_front_fitness = [ind.fitness.values for ind in pareto_front]
 
         # Update the dynamic plot
         dynamic_pareto_plot(all_fitness, pareto_front_fitness, ax, scat_current_gen, scat_previous_gens, scat_pareto_front)
         print(f"Generation {gen} completed")
 
-    best_individuals = tools.selBest(population, k=3)  # Select the top 3 individuals
-    print("Best Individuals:")
-    for ind in best_individuals:
-        print(ind, ind.fitness.values)
-
-    # Calculate and print statistics
-    fitness_values = [ind.fitness.values for ind in population]
-    QoS_mean_fitness = round(sum(f[0] for f in fitness_values) / len(population), 3)
-    RPN_mean_fitness = round(sum(f[1] for f in fitness_values) / len(population), 3)
-    print("Mean fitness:", QoS_mean_fitness, RPN_mean_fitness)
-
-    # wait for 
-    input("Press enter to exit ;)")
+    print("Final population hypervolume is %f" % hypervolume(pop, [11.0, 11.0]))
+    
+    return pop, logbook
 
 if __name__ == '__main__':
-    main()
+    pop, stats = main()
+    
+    pop.sort(key=lambda x: x.fitness.values)
+
+    print(stats)
+    # print("Convergence: ", convergence(pop, optimal_front))
+    # print("Diversity: ", diversity(pop, optimal_front[0], optimal_front[-1]))
+    
+    # front = numpy.array([ind.fitness.values for ind in pop])
+    # optimal_front = numpy.array(optimal_front)
+    # plt.scatter(optimal_front[:,0], optimal_front[:,1], c="r")
+    # plt.scatter(front[:,0], front[:,1], c="b")
+    # plt.axis("tight")
+    # plt.show()
+    
+    # wait for 
+    input("Press enter to exit ;)")
